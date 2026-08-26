@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Check-in - BWIH{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/" class="text-blue-600 hover:underline">&larr; 返回</a>
+</div>
+
+<div class="bg-white rounded shadow p-6">
+    <h1 class="text-2xl font-bold mb-6">司机 Check-in</h1>
+    
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        
+        <!-- 司机选择 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">司机</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">选择已有司机</label>
+                    <select name="driver_id" id="driver_select" class="w-full border rounded px-3 py-2 text-lg">
+                        <option value="">-- 选择 --</option>
+                        {% for d in drivers %}
+                        <option value="{{ d.id }}" data-carrier="{{ d.carrier_id or '' }}">
+                            {{ d.name }}{% if d.carrier_name %} ({{ d.carrier_name }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">或新司机姓名</label>
+                    <input type="text" name="new_driver_name" placeholder="输入新司机姓名"
+                           class="w-full border rounded px-3 py-2 text-lg">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 供应商 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">供应商</h2>
+            <div class="flex gap-4">
+                {% for c in carriers %}
+                <label class="flex-1">
+                    <input type="radio" name="carrier_id" value="{{ c.id }}" class="hidden peer">
+                    <span class="block text-center px-6 py-4 border-2 rounded-lg cursor-pointer text-xl font-bold
+                                 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
+                                 hover:bg-gray-50">
+                        {{ c.name }}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- 时间 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">时间</h2>
+            <div class="grid grid-cols-2 gap-8">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-2">实际到达时间</label>
+                    <select name="arrival_time" class="w-full border rounded px-3 py-3 text-xl">
+                        <option value="">-- 选择时间 --</option>
+                        {% for t in time_options %}
+                        <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-2">约定到达时间</label>
+                    <select name="scheduled_time" class="w-full border rounded px-3 py-3 text-xl">
+                        <option value="">-- 选择时间 --</option>
+                        {% for t in time_options %}
+                        <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 目的地 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">目的地</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <label class="block">
+                    <input type="radio" name="route" value="IAD" class="hidden peer">
+                    <span class="block px-4 py-4 border-2 rounded-lg cursor-pointer
+                                 peer-checked:bg-blue-600 peer-checked:text-white hover:bg-gray-50">
+                        <span class="text-2xl font-bold block">IAD</span>
+                        <span class="text-sm">6714 Electronic Dr, Springfield, VA 22151</span>
+                    </span>
+                </label>
+                <label class="block">
+                    <input type="radio" name="route" value="DCA" class="hidden peer">
+                    <span class="block px-4 py-4 border-2 rounded-lg cursor-pointer
+                                 peer-checked:bg-blue-600 peer-checked:text-white hover:bg-gray-50">
+                        <span class="text-2xl font-bold block">DCA</span>
+                        <span class="text-sm">10726 Tucker St, Unit B, Beltsville, MD 20705</span>
+                    </span>
+                </label>
+                <label class="block">
+                    <input type="radio" name="route" value="RIC" class="hidden peer">
+                    <span class="block px-4 py-4 border-2 rounded-lg cursor-pointer
+                                 peer-checked:bg-blue-600 peer-checked:text-white hover:bg-gray-50">
+                        <span class="text-2xl font-bold block">RIC</span>
+                        <span class="text-sm">1103 Oliver Hl Wy, Richmond, VA 23219</span>
+                    </span>
+                </label>
+                <label class="block">
+                    <input type="radio" name="route" value="ORF" class="hidden peer">
+                    <span class="block px-4 py-4 border-2 rounded-lg cursor-pointer
+                                 peer-checked:bg-blue-600 peer-checked:text-white hover:bg-gray-50">
+                        <span class="text-2xl font-bold block">ORF</span>
+                        <span class="text-sm">30 Aberdeen Rd, Hampton, VA 23661</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- 回货 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">是否拉回货</h2>
+            <div class="flex gap-6">
+                <label class="flex-1">
+                    <input type="radio" name="needs_return_cargo" value="1" class="hidden peer">
+                    <span class="block text-center px-6 py-6 border-4 rounded-lg cursor-pointer
+                                 peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600 hover:bg-gray-50">
+                        <span class="text-4xl font-bold block">是</span>
+                        <span class="text-lg">需要拉回货</span>
+                    </span>
+                </label>
+                <label class="flex-1">
+                    <input type="radio" name="needs_return_cargo" value="0" checked class="hidden peer">
+                    <span class="block text-center px-6 py-6 border-4 rounded-lg cursor-pointer
+                                 peer-checked:bg-gray-600 peer-checked:text-white peer-checked:border-gray-600 hover:bg-gray-50">
+                        <span class="text-4xl font-bold block">否</span>
+                        <span class="text-lg">不需要回货</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- 驾照 -->
+        <div class="border-b pb-6">
+            <h2 class="font-semibold mb-4">司机驾照</h2>
+            <input type="file" name="license_photo" accept="image/*"
+                   class="block w-full text-lg
+                          file:mr-4 file:py-3 file:px-6 file:rounded 
+                          file:border-0 file:font-semibold
+                          file:bg-blue-50 file:text-blue-700 
+                          hover:file:bg-blue-100">
+        </div>
+        
+        <!-- 其他 -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">车辆</label>
+                <input type="text" name="truck" placeholder="车牌/Trailer"
+                       class="w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Dock</label>
+                <input type="text" name="dock" class="w-full border rounded px-3 py-2">
+            </div>
+        </div>
+        
+        <!-- 提交 -->
+        <div class="flex justify-end pt-4">
+            <button type="submit" class="bg-blue-600 text-white px-10 py-4 rounded-lg text-xl font-bold hover:bg-blue-700">
+                提交 Check-in
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('driver_select').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const carrierId = selected.dataset.carrier;
+    if (carrierId) {
+        const radio = document.querySelector(`input[name="carrier_id"][value="${carrierId}"]`);
+        if (radio) radio.checked = true;
+    }
+});
+</script>
+{% endblock %}

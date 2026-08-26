@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}供应商列表 - BWIH{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">供应商列表</h1>
+    <a href="/carrier/new" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        新增供应商
+    </a>
+</div>
+
+{% if carriers %}
+<div class="bg-white rounded shadow overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+            <tr>
+                <th class="px-4 py-2">名称</th>
+                <th class="px-4 py-2">联系人</th>
+                <th class="px-4 py-2">电话</th>
+                <th class="px-4 py-2">备注</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y">
+            {% for c in carriers %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2">
+                    <a href="/carrier/{{ c.id }}" class="text-blue-600 hover:underline font-medium">{{ c.name }}</a>
+                </td>
+                <td class="px-4 py-2">{{ c.contact or '-' }}</td>
+                <td class="px-4 py-2">{{ c.phone or '-' }}</td>
+                <td class="px-4 py-2 text-gray-500">{{ c.notes or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded shadow p-8 text-center text-gray-500">
+    暂无供应商
+</div>
+{% endif %}
+{% endblock %}

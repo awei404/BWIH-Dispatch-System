@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}记录详情 - BWIH{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/" class="text-blue-600 hover:underline">&larr; 返回</a>
+</div>
+
+<div class="bg-white rounded shadow p-6">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h1 class="text-xl font-bold">{{ checkin.driver_name }}</h1>
+            <p class="text-gray-500">{{ checkin.carrier_name or '-' }} · {{ checkin.date }}</p>
+        </div>
+        <div class="text-right">
+            {% if checkin.late_minutes is not none %}
+                {% if checkin.late_minutes <= 0 %}
+                    <div class="text-2xl font-bold text-green-600">提前 {{ -checkin.late_minutes }} 分钟</div>
+                {% else %}
+                    <div class="text-2xl font-bold text-red-600">迟到 {{ checkin.late_minutes }} 分钟</div>
+                {% endif %}
+            {% endif %}
+            {% if checkin.score_given is not none %}
+                <div class="text-sm">评分: <span class="font-bold">{{ checkin.score_given|int }}</span></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded">
+            <div>
+                <label class="block text-sm text-gray-500">到达时间</label>
+                <input type="text" name="arrival_time" value="{{ checkin.arrival_time or '' }}"
+                       class="w-full border rounded px-2 py-1 mt-1 text-lg">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-500">约定时间</label>
+                <input type="text" name="scheduled_time" value="{{ checkin.scheduled_time or '' }}"
+                       class="w-full border rounded px-2 py-1 mt-1 text-lg">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">目的地</label>
+                <input type="text" name="route" value="{{ checkin.route or '' }}"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Dock</label>
+                <input type="text" name="dock" value="{{ checkin.dock or '' }}"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">车辆</label>
+                <input type="text" name="truck" value="{{ checkin.truck or '' }}"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">DMS 任务编号</label>
+                <input type="text" name="dms_task_id" value="{{ checkin.dms_task_id or '' }}" class="w-full border rounded px-2 py-1 font-mono">
+                <label class="flex items-center mt-2 text-sm">
+                    <input type="checkbox" name="dms_match_confirmed" value="1" {% if checkin.dms_match_confirmed %}checked{% endif %} class="mr-2">
+                    已人工确认任务编号与该司机一致
+                </label>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">实际发车时间</label>
+                <input type="text" name="departure_time" value="{{ checkin.departure_time or '' }}" class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">等待时间</label>
+                <div class="pt-2 font-semibold">{{ checkin.wait_minutes if checkin.wait_minutes is not none else '-' }} 分钟</div>
+            </div>
+        </div>
+
+        <div class="border-2 border-red-100 rounded p-4">
+            <label class="block text-sm text-gray-600 mb-1">线路执行结果</label>
+            <select name="route_ok" class="w-full border rounded px-2 py-2">
+                <option value="1" {% if checkin.route_ok %}selected{% endif %}>线路正确</option>
+                <option value="0" {% if not checkin.route_ok %}selected{% endif %}>跑错线路（本次直接 0 分）</option>
+            </select>
+        </div>
+
+        <div class="border-2 border-amber-200 bg-amber-50 rounded p-4">
+            <h3 class="font-semibold mb-1">人工扣分</h3>
+            <p class="text-sm text-gray-600 mb-3">由调度员填写。本次分数会在自动规则计算后，再扣除此分数。</p>
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">扣分数</label>
+                    <input type="number" name="manual_deduction" min="0" max="100" step="1"
+                           value="{{ checkin.manual_deduction|default(0, true)|int }}"
+                           class="w-full border rounded px-2 py-2" placeholder="0">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">扣分类型</label>
+                    <select name="manual_deduction_category" class="w-full border rounded px-2 py-2">
+                        <option value="">请选择</option>
+                        <option value="行为异常" {% if checkin.manual_deduction_category == '行为异常' %}selected{% endif %}>行为异常</option>
+                        <option value="影响操作" {% if checkin.manual_deduction_category == '影响操作' %}selected{% endif %}>影响操作</option>
+                        <option value="其他" {% if checkin.manual_deduction_category == '其他' %}selected{% endif %}>其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">扣分原因</label>
+                    <input type="text" name="manual_deduction_reason" value="{{ checkin.manual_deduction_reason or '' }}"
+                           class="w-full border rounded px-2 py-2" placeholder="请简要说明">
+                </div>
+            </div>
+        </div>
+
+        <div class="border-2 border-gray-200 rounded p-4">
+            <h3 class="font-semibold mb-3">回货信息</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">是否需要回货</label>
+                    <select name="needs_return_cargo" class="w-full border rounded px-2 py-2">
+                        <option value="0" {% if not checkin.needs_return_cargo %}selected{% endif %}>否</option>
+                        <option value="1" {% if checkin.needs_return_cargo %}selected{% endif %}>是</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">回货结果</label>
+                    <select name="return_cargo_status" class="w-full border rounded px-2 py-2">
+                        <option value="">待确认</option>
+                        <option value="已完成" {% if checkin.return_cargo_status == '已完成' %}selected{% endif %}>已完成</option>
+                        <option value="未完成" {% if checkin.return_cargo_status == '未完成' %}selected{% endif %}>未完成</option>
+                        <option value="部分完成" {% if checkin.return_cargo_status == '部分完成' %}selected{% endif %}>部分完成</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm text-gray-600 mb-1">备注</label>
+            <textarea name="notes" rows="2" class="w-full border rounded px-2 py-1">{{ checkin.notes or '' }}</textarea>
+        </div>
+
+        {% if checkin.license_photo %}
+        <div>
+            <label class="block text-sm text-gray-600 mb-2">驾照照片</label>
+            <img src="/uploads/{{ checkin.license_photo }}" alt="驾照" class="max-w-xs rounded border">
+        </div>
+        {% endif %}
+
+        <div class="flex justify-between border-t pt-4">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">保存</button>
+            <a href="/print/{{ checkin.id }}" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700">打印</a>
+        </div>
+    </form>
+    
+    <div class="border-t mt-6 pt-4">
+        <form method="post" action="/record/{{ checkin.id }}/delete" onsubmit="return confirm('确定删除?');">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">删除记录</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

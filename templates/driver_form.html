@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{% if driver %}编辑司机{% else %}新增司机{% endif %} - BWIH{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/drivers" class="text-blue-600 hover:underline">&larr; 返回列表</a>
+</div>
+
+{% if error %}
+<div class="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{{ error }}</div>
+{% endif %}
+
+<div class="bg-white rounded shadow p-6">
+    <h1 class="text-xl font-bold mb-6">{% if driver %}编辑司机{% else %}新增司机{% endif %}</h1>
+    
+    <form method="post" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">姓名 *</label>
+                <input type="text" name="name" value="{{ driver.name if driver else '' }}" required
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">电话</label>
+                <input type="text" name="phone" value="{{ driver.phone if driver else '' }}" 
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">供应商</label>
+                <select name="carrier_id" class="w-full border rounded px-2 py-1">
+                    <option value="">无</option>
+                    {% for c in carriers %}
+                    <option value="{{ c.id }}" {% if driver and c.id == driver.carrier_id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">常跑线路</label>
+                <input type="text" name="usual_routes" value="{{ driver.usual_routes if driver else '' }}" 
+                       placeholder="如 IAD,DCA,RIC"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

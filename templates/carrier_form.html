@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{% if carrier %}编辑供应商{% else %}新增供应商{% endif %} - BWIH{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/carriers" class="text-blue-600 hover:underline">&larr; 返回列表</a>
+</div>
+
+{% if error %}
+<div class="bg-red-100 text-red-700 px-4 py-2 rounded mb-4">{{ error }}</div>
+{% endif %}
+
+<div class="bg-white rounded shadow p-6">
+    <h1 class="text-xl font-bold mb-6">{% if carrier %}编辑供应商{% else %}新增供应商{% endif %}</h1>
+    
+    <form method="post" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">名称 *</label>
+                <input type="text" name="name" value="{{ carrier.name if carrier else '' }}" required
+                       placeholder="如 HHX, MAP, Noble"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">联系人</label>
+                <input type="text" name="contact" value="{{ carrier.contact if carrier else '' }}" 
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">电话</label>
+                <input type="text" name="phone" value="{{ carrier.phone if carrier else '' }}" 
+                       class="w-full border rounded px-2 py-1">
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm text-gray-600 mb-1">备注</label>
+            <textarea name="notes" rows="2" class="w-full border rounded px-2 py-1">{{ carrier.notes if carrier else '' }}</textarea>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+                保存
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}{{ driver.name }} - BWIH{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/drivers" class="text-blue-600 hover:underline">&larr; 返回列表</a>
+</div>
+
+<div class="bg-white rounded shadow p-6 mb-6">
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h1 class="text-2xl font-bold">{{ driver.name }}</h1>
+            <p class="text-gray-500">{{ driver.carrier_name or '无供应商' }}</p>
+        </div>
+        <div class="text-right">
+            <div class="text-3xl font-bold {% if driver.score >= 90 %}text-green-600{% elif driver.score >= 70 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                {{ driver.score|round(0)|int }}
+            </div>
+            <div class="text-sm text-gray-500">评分</div>
+        </div>
+    </div>
+
+    <!-- 统计 -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-50 p-3 rounded text-center">
+            <div class="text-xl font-bold">{{ checkins|length }}</div>
+            <div class="text-xs text-gray-500">近30天</div>
+        </div>
+        <div class="bg-gray-50 p-3 rounded text-center">
+            {% set avg_wait = checkins|selectattr('wait_minutes')|map(attribute='wait_minutes')|list %}
+            <div class="text-xl font-bold">
+                {% if avg_wait %}{{ (avg_wait|sum / avg_wait|length)|round(0)|int }}{% else %}-{% endif %}
+            </div>
+            <div class="text-xs text-gray-500">平均等待(分)</div>
+        </div>
+        <div class="bg-gray-50 p-3 rounded text-center">
+            <div class="text-xl font-bold text-red-600">
+                {{ checkins|rejectattr('route_ok')|list|length }}
+            </div>
+            <div class="text-xs text-gray-500">线路错误</div>
+        </div>
+        <div class="bg-gray-50 p-3 rounded text-center">
+            <div class="text-xl font-bold text-red-600">
+                {{ checkins|selectattr('return_cargo_status', 'equalto', '未带回')|list|length }}
+            </div>
+            <div class="text-xs text-gray-500">回货缺失</div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">姓名</label>
+                <input type="text" name="name" value="{{ driver.name }}"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">电话</label>
+                <input type="text" name="phone" value="{{ driver.phone or '' }}"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">供应商</label>
+                <select name="carrier_id" class="w-full border rounded px-2 py-1">
+                    <option value="">无</option>
+                    {% for c in carriers %}
+                    <option value="{{ c.id }}" {% if c.id == driver.carrier_id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">常跑线路</label>
+                <input type="text" name="usual_routes" value="{{ driver.usual_routes or '' }}"
+                       placeholder="如 IAD,DCA,RIC"
+                       class="w-full border rounded px-2 py-1">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">状态</label>
+                <select name="status" class="w-full border rounded px-2 py-1">
+                    <option value="可用" {% if driver.status == '可用' %}selected{% endif %}>可用</option>
+                    <option value="谨慎" {% if driver.status == '谨慎' %}selected{% endif %}>谨慎</option>
+                    <option value="限制" {% if driver.status == '限制' %}selected{% endif %}>限制</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">驾照照片</label>
+                <input type="file" name="license_photo" accept="image/*"
+                       class="block w-full text-sm text-gray-500">
+                {% if driver.license_photo %}
+                <a href="/uploads/{{ driver.license_photo }}" target="_blank" 
+                   class="text-blue-600 text-sm hover:underline">查看当前照片</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                保存
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- 近期记录 -->
+{% if checkins %}
+<div class="bg-white rounded shadow p-6">
+    <h2 class="font-semibold mb-4">近30天记录</h2>
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+            <tr>
+                <th class="px-3 py-2">日期</th>
+                <th class="px-3 py-2">到达</th>
+                <th class="px-3 py-2">发车</th>
+                <th class="px-3 py-2">等待</th>
+                <th class="px-3 py-2">DMS</th>
+                <th class="px-3 py-2">路线</th>
+                <th class="px-3 py-2">回货</th>
+                <th class="px-3 py-2">人工扣分</th>
+                <th class="px-3 py-2">评分</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y">
+            {% for ch in checkins %}
+            <tr class="{% if not ch.route_ok %}bg-red-50{% endif %}">
+                <td class="px-3 py-2">{{ ch.date }}</td>
+                <td class="px-3 py-2">{{ ch.arrival_time or '-' }}</td>
+                <td class="px-3 py-2">{{ ch.departure_time or '-' }}</td>
+                <td class="px-3 py-2">
+                    {% if ch.wait_minutes is not none %}
+                        <span class="{% if ch.wait_minutes > 120 %}text-red-600{% elif ch.wait_minutes > 60 %}text-yellow-600{% endif %}">
+                            {{ ch.wait_minutes }}分
+                        </span>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2 font-mono text-xs">{{ ch.dms_task_id or '-' }}</td>
+                <td class="px-3 py-2">{{ ch.route or '-' }}</td>
+                <td class="px-3 py-2">
+                    {% if ch.return_cargo_status == '未带回' %}
+                        <span class="text-red-600">未带回</span>
+                    {% elif ch.return_cargo_status %}
+                        {{ ch.return_cargo_status }}
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    {% if ch.manual_deduction %}
+                        <span class="text-red-600">-{{ ch.manual_deduction|round(0)|int }}</span>
+                        <div class="text-xs text-gray-500">{{ ch.manual_deduction_category or '未分类' }}{% if ch.manual_deduction_reason %}：{{ ch.manual_deduction_reason }}{% endif %}</div>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2">
+                    {% if ch.score_given is not none %}
+                        <span class="{% if ch.score_given >= 90 %}text-green-600{% elif ch.score_given >= 70 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ ch.score_given|round(0)|int }}
+                        </span>
+                    {% else %}-{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

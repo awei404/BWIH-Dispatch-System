@@ -1,0 +1,15 @@
+@echo off
+setlocal
+cd /d "%~dp0.."
+
+python -m PyInstaller --noconfirm --clean --windowed ^
+  --name "BWIH Dispatch" ^
+  --add-data "templates;templates" ^
+  --add-data "static;static" ^
+  --collect-all webview ^
+  --hidden-import webview.platforms.edgechromium ^
+  --hidden-import openpyxl ^
+  desktop_app.py
+
+echo Created: dist\BWIH Dispatch\BWIH Dispatch.exe
+endlocal

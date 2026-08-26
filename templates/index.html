@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}今日记录 - BWIH{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">
+        {% if selected_date == today %}今日 Check-in{% else %}{{ selected_date }}{% endif %}
+    </h1>
+    <div class="flex items-center space-x-4">
+        <form method="get">
+            <input type="date" name="date" value="{{ selected_date }}" 
+                   onchange="this.form.submit()" class="border rounded px-2 py-1">
+        </form>
+        <a href="/checkin" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            + Check-in
+        </a>
+    </div>
+</div>
+
+<!-- 统计 -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded shadow p-4 text-center">
+        <div class="text-2xl font-bold">{{ checkins|length }}</div>
+        <div class="text-gray-500 text-sm">总数</div>
+    </div>
+    <div class="bg-white rounded shadow p-4 text-center">
+        {% set on_time = checkins|selectattr('late_minutes')|selectattr('late_minutes', 'le', 0)|list|length %}
+        <div class="text-2xl font-bold text-green-600">{{ on_time }}</div>
+        <div class="text-gray-500 text-sm">准时/提前</div>
+    </div>
+    <div class="bg-white rounded shadow p-4 text-center">
+        {% set late = checkins|selectattr('late_minutes')|selectattr('late_minutes', 'gt', 0)|list|length %}
+        <div class="text-2xl font-bold text-red-600">{{ late }}</div>
+        <div class="text-gray-500 text-sm">迟到</div>
+    </div>
+</div>
+
+<!-- 记录列表 -->
+{% if checkins %}
+<div class="bg-white rounded shadow overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+            <tr>
+                <th class="px-4 py-2">到达</th>
+                <th class="px-4 py-2">约定</th>
+                <th class="px-4 py-2">早/晚</th>
+                <th class="px-4 py-2">司机</th>
+                <th class="px-4 py-2">供应商</th>
+                <th class="px-4 py-2">目的地</th>
+                <th class="px-4 py-2">DMS 任务</th>
+                <th class="px-4 py-2">发车 / 等待</th>
+                <th class="px-4 py-2">回货</th>
+                <th class="px-4 py-2">评分</th>
+                <th class="px-4 py-2"></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y">
+            {% for ch in checkins %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2 font-medium">{{ ch.arrival_time or '-' }}</td>
+                <td class="px-4 py-2 text-gray-500">{{ ch.scheduled_time or '-' }}</td>
+                <td class="px-4 py-2">
+                    {% if ch.late_minutes is not none %}
+                        {% if ch.late_minutes <= 0 %}
+                            <span class="text-green-600">提前{{ -ch.late_minutes }}分</span>
+                        {% else %}
+                            <span class="text-red-600">晚{{ ch.late_minutes }}分</span>
+                        {% endif %}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2">
+                    <a href="/driver/{{ ch.driver_id }}" class="text-blue-600 hover:underline">{{ ch.driver_name }}</a>
+                </td>
+                <td class="px-4 py-2">{{ ch.carrier_name or '-' }}</td>
+                <td class="px-4 py-2 font-bold text-lg">{{ ch.route or '-' }}</td>
+                <td class="px-4 py-2 font-mono text-xs">
+                    {{ ch.dms_task_id or '-' }}
+                    {% if ch.dms_task_id and not ch.dms_match_confirmed %}<span class="block text-orange-600">待确认</span>{% endif %}
+                </td>
+                <td class="px-4 py-2">{{ ch.departure_time or '-' }}{% if ch.wait_minutes is not none %}<span class="block text-xs text-gray-500">{{ ch.wait_minutes }} 分钟</span>{% endif %}</td>
+                <td class="px-4 py-2">
+                    {% if ch.needs_return_cargo %}
+                        <span class="font-bold">是</span>
+                        {% if ch.return_cargo_status == '已完成' %}
+                            <span class="text-green-600 text-xs ml-1">✓已完成</span>
+                        {% elif ch.return_cargo_status == '未完成' %}
+                            <span class="text-red-600 text-xs ml-1">✗未完成</span>
+                        {% elif ch.return_cargo_status == '部分完成' %}
+                            <span class="text-yellow-600 text-xs ml-1">部分</span>
+                        {% else %}
+                            <span class="text-gray-400 text-xs ml-1">待确认</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-gray-400">否</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2">
+                    {% if ch.score_given is not none %}
+                        <span class="font-bold {% if ch.score_given >= 90 %}text-green-600{% elif ch.score_given >= 70 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ ch.score_given|int }}
+                        </span>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2">
+                    <a href="/print/{{ ch.id }}" class="text-blue-600 hover:underline mr-2">打印</a>
+                    <a href="/record/{{ ch.id }}" class="text-gray-500 hover:underline">编辑</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded shadow p-8 text-center text-gray-500">
+    暂无记录
+    <br>
+    <a href="/checkin" class="text-blue-600 hover:underline">去 Check-in</a>
+</div>
+{% endif %}
+{% endblock %}

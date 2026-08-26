@@ -1,0 +1,29 @@
+# Local operational data — never publish
+dispatch.db
+uploads/
+app.log
+*.sqlite
+
+# Private working material
+*.docx
+*.xlsx
+*.xls
+BWIH 调度系统.app/
+BWIH调度服务.plist
+双击打开调度系统.command
+start.sh
+start.bat
+BWIH调度系统_备份包.zip
+driver-check-pages/
+
+# Build output and Python cache
+venv/
+__pycache__/
+*.py[cod]
+build/
+dist/
+release/
+*.spec
+.tools/
+.github-auth/
+.DS_Store
