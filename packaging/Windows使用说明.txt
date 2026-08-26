@@ -1,0 +1,10 @@
+BWIH 调度系统（Windows x64）
+
+请先将 ZIP 压缩包完整解压到电脑文件夹，再双击 BWIH Dispatch.exe。
+
+如果 Windows 显示“Windows 已保护你的电脑”：点击“更多信息”后选择“仍要运行”。
+
+如果系统弹出 BWIH 调度系统的错误提示，请按提示安装 Microsoft Edge WebView2 Runtime，或将 startup-error.log 发给系统管理员。
+
+数据只保存在当前 Windows 用户的电脑：
+%LOCALAPPDATA%\BWIH Dispatch

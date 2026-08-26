@@ -22,7 +22,8 @@ jobs:
       - run: packaging\build_windows.bat
       - run: |
           New-Item -ItemType Directory -Force -Path release
-          Compress-Archive -Path "dist\BWIH Dispatch\*" -DestinationPath "release\BWIH调度系统-Windows-x64.zip"
+          Copy-Item "packaging\Windows使用说明.txt" "release\Windows使用说明.txt"
+          Compress-Archive -Path "dist\BWIH Dispatch.exe", "release\Windows使用说明.txt" -DestinationPath "release\BWIH调度系统-Windows-x64.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: BWIH-Dispatch-Windows

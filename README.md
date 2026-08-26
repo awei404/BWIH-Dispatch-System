@@ -22,7 +22,7 @@
 请到本仓库的 **Releases** 下载对应系统的独立包：
 
 - macOS Apple Silicon（M1–M4）：解压后双击 `.app`
-- Windows 10/11 x64：解压后双击 `BWIH Dispatch.exe`
+- Windows 10/11 x64：先完整解压 ZIP，再双击 `BWIH Dispatch.exe`
 
 最终用户不需要安装 Python 或配置网页服务。
 

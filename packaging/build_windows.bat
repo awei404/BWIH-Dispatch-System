@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0.."
 
-python -m PyInstaller --noconfirm --clean --windowed ^
+python -m PyInstaller --noconfirm --clean --windowed --onefile ^
   --name "BWIH Dispatch" ^
   --add-data "templates;templates" ^
   --add-data "static;static" ^
@@ -11,5 +11,5 @@ python -m PyInstaller --noconfirm --clean --windowed ^
   --hidden-import openpyxl ^
   desktop_app.py
 
-echo Created: dist\BWIH Dispatch\BWIH Dispatch.exe
+echo Created: dist\BWIH Dispatch.exe
 endlocal
