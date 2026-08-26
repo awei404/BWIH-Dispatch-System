@@ -27,3 +27,7 @@ release/
 .tools/
 .github-auth/
 .DS_Store
+
+# Local source/intermediate files used to generate the application icon
+packaging/assets/*.png
+packaging/assets/*.iconset/

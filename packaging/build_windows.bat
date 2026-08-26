@@ -4,6 +4,7 @@ cd /d "%~dp0.."
 
 python -m PyInstaller --noconfirm --clean --windowed --onefile ^
   --name "BWIH Dispatch" ^
+  --icon "packaging\assets\bwih-dispatch.ico" ^
   --add-data "templates;templates" ^
   --add-data "static;static" ^
   --collect-all webview ^

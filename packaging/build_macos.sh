@@ -11,6 +11,7 @@ mkdir -p "$PYINSTALLER_CONFIG_DIR"
 
 python3 -m PyInstaller --noconfirm --clean --onedir \
   --name "BWIH 调度系统" \
+  --icon "$ROOT_DIR/packaging/assets/bwih-dispatch.icns" \
   --add-data "templates:templates" \
   --add-data "static:static" \
   --collect-all webview \
@@ -18,9 +19,10 @@ python3 -m PyInstaller --noconfirm --clean --onedir \
   --hidden-import openpyxl \
   desktop_app.py
 
-APP_DIR="$ROOT_DIR/release/BWIH调度系统-macOS-1.0.1.app"
-mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Frameworks"
+APP_DIR="$ROOT_DIR/release/BWIH调度系统-macOS.app"
+mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Frameworks" "$APP_DIR/Contents/Resources"
 cp "$ROOT_DIR/packaging/macos-Info.plist" "$APP_DIR/Contents/Info.plist"
+cp "$ROOT_DIR/packaging/assets/bwih-dispatch.icns" "$APP_DIR/Contents/Resources/bwih-dispatch.icns"
 cp "$ROOT_DIR/dist/BWIH 调度系统/BWIH 调度系统" "$APP_DIR/Contents/MacOS/BWIH 调度系统"
 ditto "$ROOT_DIR/dist/BWIH 调度系统/_internal" "$APP_DIR/Contents/Frameworks"
 
