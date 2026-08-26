@@ -1,68 +1,74 @@
-"""Desktop entry point used by the macOS and Windows standalone apps."""
-import ctypes
+"""Desktop entry point – starts Flask and opens the system browser."""
 import os
 import sys
+import socket
 import threading
 import traceback
+import webbrowser
 
 
-def startup_data_dir():
-    """Return a safe log location even if the application itself cannot import."""
+def data_dir():
     if sys.platform == 'win32':
-        base_dir = os.environ.get('LOCALAPPDATA') or os.path.expanduser('~')
+        base = os.environ.get('LOCALAPPDATA') or os.path.expanduser('~')
     elif sys.platform == 'darwin':
-        base_dir = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support')
+        base = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support')
     else:
-        base_dir = os.path.expanduser('~')
-    return os.path.join(base_dir, 'BWIH Dispatch')
+        base = os.path.expanduser('~')
+    return os.path.join(base, 'BWIH Dispatch')
 
 
-def show_startup_error(error):
-    """Make a Windows startup problem visible instead of silently closing."""
+def find_free_port(preferred=8080):
+    """Use the preferred port if available, otherwise pick a random free one."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(('127.0.0.1', preferred))
+            return preferred
+        except OSError:
+            s.bind(('127.0.0.1', 0))
+            return s.getsockname()[1]
+
+
+def show_error(error):
     details = traceback.format_exc()
-    log_dir = startup_data_dir()
-    log_path = os.path.join(log_dir, 'startup-error.log')
+    log_path = os.path.join(data_dir(), 'startup-error.log')
     try:
-        os.makedirs(log_dir, exist_ok=True)
-        with open(log_path, 'w', encoding='utf-8') as log_file:
-            log_file.write(details)
+        os.makedirs(data_dir(), exist_ok=True)
+        with open(log_path, 'w', encoding='utf-8') as f:
+            f.write(details)
     except OSError:
         pass
 
-    message = (
-        'BWIH 调度系统无法启动。\n\n'
-        f'原因：{error}\n\n'
-        f'详细日志：{log_path}\n\n'
-        '请确认已安装 Microsoft Edge WebView2 Runtime，然后重新打开。'
-    )
+    msg = f'BWIH 调度系统无法启动。\n\n原因：{error}\n\n日志：{log_path}'
     if sys.platform == 'win32':
-        ctypes.windll.user32.MessageBoxW(None, message, 'BWIH 调度系统', 0x10)
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(None, msg, 'BWIH 调度系统', 0x10)
     else:
-        print(message, file=sys.stderr)
+        print(msg, file=sys.stderr)
 
 
 def main():
-    """Load optional desktop dependencies inside the error boundary."""
-    import webview
     from werkzeug.serving import make_server
     from app import app
 
-    # Bind first, so the desktop window never opens before its local page is ready.
-    server = make_server('127.0.0.1', 8080, app)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    port = find_free_port(8080)
+    server = make_server('127.0.0.1', port, app)
+    url = f'http://127.0.0.1:{port}/'
 
-    webview.create_window(
-        'BWIH 调度系统',
-        'http://127.0.0.1:8080/',
-        width=1440,
-        height=900,
-        min_size=(1100, 700),
-    )
-    webview.start()
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f'BWIH 调度系统已启动：{url}')
+    webbrowser.open(url)
+
+    try:
+        # Keep the main thread alive until user closes terminal / Ctrl-C.
+        server_thread = threading.Event()
+        server_thread.wait()
+    except KeyboardInterrupt:
+        print('\n已关闭。')
+        server.shutdown()
 
 
 if __name__ == '__main__':
     try:
         main()
-    except Exception as error:
-        show_startup_error(error)
+    except Exception as e:
+        show_error(e)

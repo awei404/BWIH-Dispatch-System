@@ -1,10 +1,13 @@
-BWIH 调度系统（Windows x64）
+BWIH 调度系统 - Windows 使用说明
+===================================
 
-请先将 ZIP 压缩包完整解压到电脑文件夹，再双击 BWIH Dispatch.exe。
+1. 解压整个 ZIP 到一个文件夹（比如桌面）
+2. 打开文件夹，双击 "BWIH Dispatch.exe"
+3. 程序会自动在浏览器中打开系统页面
+4. 关闭时直接关掉黑色命令窗口即可
 
-如果 Windows 显示“Windows 已保护你的电脑”：点击“更多信息”后选择“仍要运行”。
-
-如果系统弹出 BWIH 调度系统的错误提示，请按提示安装 Microsoft Edge WebView2 Runtime，或将 startup-error.log 发给系统管理员。
-
-数据只保存在当前 Windows 用户的电脑：
-%LOCALAPPDATA%\BWIH Dispatch
+注意：
+- 不需要安装 Python
+- 不需要安装 WebView2
+- 第一次运行 Windows 可能弹出防火墙提示，选择"允许"
+- 数据保存在：%LOCALAPPDATA%\BWIH Dispatch\

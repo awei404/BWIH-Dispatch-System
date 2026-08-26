@@ -5,7 +5,7 @@
     <key>CFBundleDisplayName</key>
     <string>BWIH 调度系统</string>
     <key>CFBundleExecutable</key>
-    <string>BWIH 调度系统</string>
+    <string>BWIH Dispatch</string>
     <key>CFBundleIconFile</key>
     <string>bwih-dispatch.icns</string>
     <key>CFBundleIdentifier</key>
