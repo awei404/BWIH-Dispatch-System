@@ -48,12 +48,14 @@ The system handles overnight shifts automatically (e.g., scheduled 23:00, arrive
 
 Drivers deliver to four stations. Each has an expected transit window from BWI:
 
-| Destination | Full Address | Estimated Drive Time |
-|-------------|-------------|---------------------|
-| **IAD** | Dulles, VA area | ~1 hr |
-| **DCA** | Reagan National, VA / DC area | ~1 hr |
-| **RIC** | Richmond, VA area | ~1.5 hr |
-| **ORF** | Norfolk, VA area | ~3 hr |
+| Destination | Address | Type | Estimated Drive Time |
+|-------------|---------|------|---------------------|
+| **IAD01** | 6714 Electronic Dr, Springfield, VA 22151 | Unload Only | ~1 hr |
+| **DCA01** | 10726 Tucker St, Unit B, Beltsville, MD 20705 | Unload Only | ~45 min |
+| **RIC01** | 1103 Oliver Hl Wy, Richmond, VA 23219 | Load and Unload | ~1.5 hr |
+| **ORF01** | 30 Aberdeen Rd, Hampton, VA 23661 | Unload Only | ~3 hr |
+
+> These are warehouse/facility locations, not airports. The codes (IAD, DCA, RIC, ORF) are internal route names only.
 
 Whether a driver reaches the destination on time depends on two things:
 
