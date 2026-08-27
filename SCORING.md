@@ -52,8 +52,8 @@ Drivers deliver to four stations. Each has an expected transit window from BWI:
 |-------------|---------|------|---------------------|
 | **IAD01** | 6714 Electronic Dr, Springfield, VA 22151 | Unload Only | ~1 hr |
 | **DCA01** | 10726 Tucker St, Unit B, Beltsville, MD 20705 | Unload Only | ~45 min |
-| **RIC01** | 1103 Oliver Hl Wy, Richmond, VA 23219 | Load and Unload | ~1.5 hr |
-| **ORF01** | 30 Aberdeen Rd, Hampton, VA 23661 | Unload Only | ~3 hr |
+| **RIC01** | 1103 Oliver Hl Wy, Richmond, VA 23219 | Load and Unload | ~2.5–3 hr |
+| **ORF01** | 30 Aberdeen Rd, Hampton, VA 23661 | Unload Only | ~3.5–4 hr |
 
 > These are warehouse/facility locations, not airports. The codes (IAD, DCA, RIC, ORF) are internal route names only.
 
