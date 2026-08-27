@@ -9,6 +9,7 @@ app.log
 *.xlsx
 *.xls
 BWIH 调度系统.app/
+BWIH调度系统（点击打开）/
 BWIH调度服务.plist
 双击打开调度系统.command
 start.sh

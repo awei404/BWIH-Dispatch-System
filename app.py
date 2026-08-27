@@ -571,10 +571,11 @@ def carrier_detail(carrier_id):
 @app.route('/data')
 def data_view():
     from datetime import timedelta
-    
+
     carriers_data = []
     carriers = db.get_carriers()
-    
+    all_drivers = db.get_drivers()
+
     for carrier in carriers:
         carrier_info = {
             'id': carrier['id'],
@@ -582,9 +583,8 @@ def data_view():
             'drivers': [],
             'checkin_count': 0
         }
-        
+
         # 获取该供应商的司机
-        all_drivers = db.get_drivers()
         for driver in all_drivers:
             if driver.get('carrier_id') == carrier['id']:
                 driver_checkins = db.get_checkins_by_driver(driver['id'], days=365)
@@ -597,9 +597,9 @@ def data_view():
                 }
                 carrier_info['drivers'].append(driver_info)
                 carrier_info['checkin_count'] += len(driver_checkins)
-        
+
         carriers_data.append(carrier_info)
-    
+
     # 无供应商的司机
     no_carrier = {
         'id': None,
@@ -607,7 +607,6 @@ def data_view():
         'drivers': [],
         'checkin_count': 0
     }
-    all_drivers = db.get_drivers()
     for driver in all_drivers:
         if not driver.get('carrier_id'):
             driver_checkins = db.get_checkins_by_driver(driver['id'], days=365)
@@ -620,10 +619,10 @@ def data_view():
             }
             no_carrier['drivers'].append(driver_info)
             no_carrier['checkin_count'] += len(driver_checkins)
-    
+
     if no_carrier['drivers']:
         carriers_data.append(no_carrier)
-    
+
     # 统计
     week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
     stats = {
@@ -632,7 +631,7 @@ def data_view():
         'total_checkins': sum(c['checkin_count'] for c in carriers_data),
         'recent_checkins': len([ch for c in carriers_data for d in c['drivers'] for ch in d['checkins'] if ch.get('date', '') >= week_ago])
     }
-    
+
     return render_template('data_view.html', carriers=carriers_data, stats=stats)
 
 
