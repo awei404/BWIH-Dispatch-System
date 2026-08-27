@@ -22,3 +22,176 @@ th {
 .score-good { color: #2563eb; }
 .score-warning { color: #ca8a04; }
 .score-danger { color: #dc2626; }
+
+/* 数据总览：供应商 → 司机 → 任务的横向逐级展开 */
+.overview-explorer {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.8fr) minmax(300px, 1fr) minmax(700px, 2.4fr);
+    gap: 14px;
+    overflow-x: auto;
+    padding: 2px 2px 14px;
+    scroll-snap-type: x proximity;
+}
+
+.overview-column {
+    min-height: 520px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    scroll-snap-align: start;
+}
+
+.overview-column-heading {
+    min-height: 58px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.overview-step {
+    display: inline-flex;
+    width: 25px;
+    height: 25px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 7px;
+    color: #fff;
+    background: #2563eb;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.overview-count,
+.overview-context {
+    max-width: 150px;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.overview-list {
+    padding: 10px;
+}
+
+.overview-choice {
+    width: 100%;
+    min-height: 66px;
+    margin-bottom: 8px;
+    padding: 12px 12px 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #0f172a;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.overview-choice:hover {
+    background: #f8fbff;
+    border-color: #93c5fd;
+}
+
+.overview-choice.is-active {
+    background: #eff6ff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.overview-choice strong,
+.overview-choice small {
+    display: block;
+}
+
+.overview-choice small {
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.overview-chevron {
+    color: #94a3b8;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.overview-choice.is-active .overview-chevron {
+    color: #2563eb;
+}
+
+.overview-placeholder,
+.overview-empty {
+    padding: 48px 20px;
+    color: #94a3b8;
+    font-size: 14px;
+    text-align: center;
+}
+
+.overview-placeholder-arrow {
+    display: block;
+    margin-bottom: 10px;
+    color: #cbd5e1;
+    font-size: 30px;
+}
+
+.overview-task-summary {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #475569;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.overview-task-table {
+    min-width: 1080px;
+}
+
+.overview-task-table thead {
+    background: #f8fafc;
+}
+
+.overview-task-table th,
+.overview-task-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.overview-task-table tbody tr:hover {
+    background: #f8fbff;
+}
+
+.overview-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.overview-badge.success { color: #166534; background: #dcfce7; }
+.overview-badge.danger { color: #991b1b; background: #fee2e2; }
+.overview-badge.warning { color: #92400e; background: #fef3c7; }
+.overview-badge.neutral { color: #475569; background: #f1f5f9; }
+
+@media (max-width: 900px) {
+    .overview-explorer {
+        grid-template-columns: 82vw 82vw minmax(680px, 92vw);
+    }
+}

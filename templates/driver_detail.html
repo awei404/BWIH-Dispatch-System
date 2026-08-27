@@ -16,7 +16,10 @@
             <div class="text-3xl font-bold {% if driver.score >= 90 %}text-green-600{% elif driver.score >= 70 %}text-yellow-600{% else %}text-red-600{% endif %}">
                 {{ driver.score|round(0)|int }}
             </div>
-            <div class="text-sm text-gray-500">评分</div>
+            <div class="text-sm text-gray-500">当前评分</div>
+            {% if driver.manual_score is not none %}
+            <div class="text-xs text-blue-600 mt-1">人工评分 · 自动评分 {{ driver.auto_score|round(0)|int }}</div>
+            {% endif %}
         </div>
     </div>
 
@@ -45,6 +48,86 @@
             </div>
             <div class="text-xs text-gray-500">回货缺失</div>
         </div>
+    </div>
+
+    <div class="border-t pt-5 mb-5">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold">手动更改司机评分</h2>
+                    <p class="text-sm text-gray-600 mt-1">输入最终评分（0–100）。保存后以人工评分为准，任务自动评分仍会继续计算并保留。</p>
+                </div>
+                <div class="text-right whitespace-nowrap">
+                    <div class="text-xs text-gray-500">自动评分</div>
+                    <div class="text-xl font-bold">{{ driver.auto_score|round(0)|int }}</div>
+                </div>
+            </div>
+
+            {% if request.args.get('score_error') %}
+            <div class="bg-red-100 text-red-700 rounded px-3 py-2 text-sm mb-3">{{ request.args.get('score_error') }}</div>
+            {% endif %}
+
+            <form method="post" action="{{ url_for('update_driver_manual_score', driver_id=driver.id) }}"
+                  class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+                <div class="md:col-span-1">
+                    <label class="block text-sm text-gray-600 mb-1">最终评分</label>
+                    <input type="number" name="manual_score" min="0" max="100" step="1" required
+                           value="{{ driver.manual_score|round(0)|int if driver.manual_score is not none else driver.score|round(0)|int }}"
+                           class="w-full border rounded px-3 py-2 bg-white">
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-sm text-gray-600 mb-1">更改原因</label>
+                    <input type="text" name="score_reason" required
+                           placeholder="例如：近期表现改善；管理复核后调整"
+                           class="w-full border rounded px-3 py-2 bg-white">
+                </div>
+                <div class="md:col-span-1">
+                    <button type="submit" name="score_action" value="set"
+                            class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        保存评分
+                    </button>
+                </div>
+            </form>
+
+            {% if driver.manual_score is not none %}
+            <div class="mt-3 pt-3 border-t border-blue-200 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <div>
+                    当前人工评分：<strong>{{ driver.manual_score|round(0)|int }}</strong>
+                    {% if driver.manual_score_reason %} · {{ driver.manual_score_reason }}{% endif %}
+                </div>
+                <form method="post" action="{{ url_for('update_driver_manual_score', driver_id=driver.id) }}">
+                    <input type="hidden" name="score_action" value="restore_auto">
+                    <input type="hidden" name="score_reason" value="恢复自动评分">
+                    <button type="submit" class="border border-gray-400 bg-white px-3 py-1.5 rounded hover:bg-gray-50">
+                        恢复自动评分
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if score_adjustments %}
+        <details class="mt-3 bg-gray-50 rounded px-4 py-3">
+            <summary class="cursor-pointer font-medium">查看评分调整记录（{{ score_adjustments|length }}）</summary>
+            <div class="mt-3 divide-y text-sm">
+                {% for adjustment in score_adjustments %}
+                <div class="py-2 flex justify-between gap-4">
+                    <div>
+                        <span class="font-medium">{{ adjustment.previous_score|round(0)|int }} → {{ adjustment.new_score|round(0)|int }}</span>
+                        <span class="text-gray-500 ml-2">{{ adjustment.action }}</span>
+                        <div class="text-gray-600">{{ adjustment.reason }}</div>
+                    </div>
+                    <div class="text-xs text-gray-500 whitespace-nowrap">{{ adjustment.created_at|replace('T', ' ') }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+    </div>
+
+    <div class="border-t pt-5 mb-4">
+        <h2 class="text-lg font-semibold">手动编辑司机资料</h2>
+        <p class="text-sm text-gray-500 mt-1">可修改姓名、电话、供应商、常跑线路、状态和驾照照片；评分请在上方单独保存。</p>
     </div>
 
     <form method="post" enctype="multipart/form-data" class="space-y-4">
@@ -93,8 +176,8 @@
             </div>
         </div>
         <div class="flex justify-end">
-            <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-                保存
+            <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">
+                保存司机资料
             </button>
         </div>
     </form>
@@ -116,6 +199,7 @@
                 <th class="px-3 py-2">回货</th>
                 <th class="px-3 py-2">人工扣分</th>
                 <th class="px-3 py-2">评分</th>
+                <th class="px-3 py-2 text-right">操作</th>
             </tr>
         </thead>
         <tbody class="divide-y">
@@ -152,6 +236,9 @@
                             {{ ch.score_given|round(0)|int }}
                         </span>
                     {% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2 text-right">
+                    <a href="/record/{{ ch.id }}" class="text-blue-600 hover:underline whitespace-nowrap">编辑记录</a>
                 </td>
             </tr>
             {% endfor %}

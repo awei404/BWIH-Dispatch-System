@@ -23,5 +23,5 @@ DATABASE_PATH = os.path.join(DATA_DIR, 'dispatch.db')
 SECRET_KEY = 'bwih-local-key'
 DEBUG = False
 HOST = '0.0.0.0'
-PORT = 8080
+PORT = 8088
 TEMPLATES_AUTO_RELOAD = True

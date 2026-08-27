@@ -20,6 +20,7 @@
                 <th class="px-4 py-2">常跑线路</th>
                 <th class="px-4 py-2">评分</th>
                 <th class="px-4 py-2">状态</th>
+                <th class="px-4 py-2 text-right">操作</th>
             </tr>
         </thead>
         <tbody class="divide-y">
@@ -44,6 +45,12 @@
                     {% else %}
                         <span class="text-red-600">{{ d.status }}</span>
                     {% endif %}
+                </td>
+                <td class="px-4 py-2 text-right">
+                    <a href="/driver/{{ d.id }}"
+                       class="inline-flex items-center bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">
+                        手动编辑
+                    </a>
                 </td>
             </tr>
             {% endfor %}

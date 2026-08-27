@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}BWIH{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <nav class="bg-blue-600 text-white">
@@ -14,12 +15,13 @@
                 <a href="/" class="hover:underline">今日</a>
                 <a href="/checkin" class="hover:underline">Check-in</a>
                 <a href="/upload" class="hover:underline">上传表格</a>
+                <a href="/data" class="hover:underline">数据总览</a>
                 <a href="/drivers" class="hover:underline">司机</a>
                 <a href="/carriers" class="hover:underline">供应商</a>
             </div>
         </div>
     </nav>
-    <main class="max-w-6xl mx-auto px-4 py-6">
+    <main class="{% block main_width %}max-w-6xl{% endblock %} mx-auto px-4 py-6">
         {% block content %}{% endblock %}
     </main>
 </body>

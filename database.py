@@ -39,8 +39,24 @@ def init_db():
                 license_photo TEXT DEFAULT '',
                 status TEXT DEFAULT '可用',
                 score REAL DEFAULT 100.0,
+                auto_score REAL DEFAULT 100.0,
+                manual_score REAL,
+                manual_score_reason TEXT DEFAULT '',
+                manual_score_updated_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (carrier_id) REFERENCES carriers(id)
+            );
+
+            -- 司机总评分的人工调整历史
+            CREATE TABLE IF NOT EXISTS driver_score_adjustments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                driver_id INTEGER NOT NULL,
+                previous_score REAL NOT NULL,
+                new_score REAL NOT NULL,
+                action TEXT DEFAULT '手动设置',
+                reason TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (driver_id) REFERENCES drivers(id)
             );
 
             -- Check-in 记录表
@@ -86,6 +102,8 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins(date);
             CREATE INDEX IF NOT EXISTS idx_checkins_driver ON checkins(driver_id);
+            CREATE INDEX IF NOT EXISTS idx_driver_score_adjustments_driver
+                ON driver_score_adjustments(driver_id, created_at DESC);
             
             -- 只保留 HHX 和 MAP
             INSERT OR IGNORE INTO carriers (name) VALUES ('HHX');
@@ -106,6 +124,17 @@ def init_db():
             conn.execute("ALTER TABLE checkins ADD COLUMN manual_deduction_category TEXT DEFAULT ''")
         if 'manual_deduction_reason' not in columns:
             conn.execute("ALTER TABLE checkins ADD COLUMN manual_deduction_reason TEXT DEFAULT ''")
+
+        driver_columns = {row['name'] for row in conn.execute('PRAGMA table_info(drivers)')}
+        if 'auto_score' not in driver_columns:
+            conn.execute('ALTER TABLE drivers ADD COLUMN auto_score REAL')
+        if 'manual_score' not in driver_columns:
+            conn.execute('ALTER TABLE drivers ADD COLUMN manual_score REAL')
+        if 'manual_score_reason' not in driver_columns:
+            conn.execute("ALTER TABLE drivers ADD COLUMN manual_score_reason TEXT DEFAULT ''")
+        if 'manual_score_updated_at' not in driver_columns:
+            conn.execute('ALTER TABLE drivers ADD COLUMN manual_score_updated_at DATETIME')
+        conn.execute('UPDATE drivers SET auto_score = score WHERE auto_score IS NULL')
     print(f"数据库已初始化: {config.DATABASE_PATH}")
 
 
@@ -179,6 +208,66 @@ def update_driver(driver_id, **kwargs):
     fields = ', '.join(f'{k} = ?' for k in kwargs.keys())
     with get_db() as conn:
         conn.execute(f'UPDATE drivers SET {fields} WHERE id = ?', list(kwargs.values()) + [driver_id])
+
+
+def set_driver_manual_score(driver_id, new_score, reason):
+    """直接设置司机总评分，并保留原分数、原因和时间。"""
+    new_score = min(100.0, max(0.0, float(new_score)))
+    reason = (reason or '').strip()
+    with get_db() as conn:
+        driver = conn.execute('SELECT score FROM drivers WHERE id = ?', (driver_id,)).fetchone()
+        if not driver:
+            return False
+        previous_score = float(driver['score'] if driver['score'] is not None else 100.0)
+        now = datetime.now().isoformat(timespec='seconds')
+        conn.execute('''
+            UPDATE drivers
+            SET score = ?, manual_score = ?, manual_score_reason = ?, manual_score_updated_at = ?
+            WHERE id = ?
+        ''', (new_score, new_score, reason, now, driver_id))
+        conn.execute('''
+            INSERT INTO driver_score_adjustments
+                (driver_id, previous_score, new_score, action, reason, created_at)
+            VALUES (?, ?, ?, '手动设置', ?, ?)
+        ''', (driver_id, previous_score, new_score, reason, now))
+    return True
+
+
+def clear_driver_manual_score(driver_id, reason='恢复自动评分'):
+    """取消人工覆盖，恢复当前近 30 天任务自动评分。"""
+    reason = (reason or '').strip() or '恢复自动评分'
+    with get_db() as conn:
+        driver = conn.execute(
+            'SELECT score, auto_score FROM drivers WHERE id = ?', (driver_id,)
+        ).fetchone()
+        if not driver:
+            return False
+        previous_score = float(driver['score'] if driver['score'] is not None else 100.0)
+        auto_score = float(driver['auto_score'] if driver['auto_score'] is not None else 100.0)
+        now = datetime.now().isoformat(timespec='seconds')
+        conn.execute('''
+            UPDATE drivers
+            SET score = ?, manual_score = NULL, manual_score_reason = '', manual_score_updated_at = ?
+            WHERE id = ?
+        ''', (auto_score, now, driver_id))
+        conn.execute('''
+            INSERT INTO driver_score_adjustments
+                (driver_id, previous_score, new_score, action, reason, created_at)
+            VALUES (?, ?, ?, '恢复自动', ?, ?)
+        ''', (driver_id, previous_score, auto_score, reason, now))
+    recalculate_driver_score(driver_id)
+    return True
+
+
+def get_driver_score_adjustments(driver_id, limit=10):
+    with get_db() as conn:
+        rows = conn.execute('''
+            SELECT * FROM driver_score_adjustments
+            WHERE driver_id = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+        ''', (driver_id, int(limit))).fetchall()
+        return [dict(row) for row in rows]
 
 
 # ========== Check-in 记录 ==========
@@ -392,20 +481,21 @@ def calculate_wait_time(arrival_time, departure_time):
 
 
 def recalculate_driver_score(driver_id):
-    """重算司机近30天平均分"""
+    """重算近 30 天自动评分；存在人工评分时继续显示人工评分。"""
     checkins = get_checkins_by_driver(driver_id, days=30)
-    if not checkins:
-        update_driver(driver_id, score=100.0)
-        return 100.0
-    
     scores = [ch['score_given'] for ch in checkins if ch.get('score_given') is not None]
-    
-    if not scores:
-        return 100.0
-    
-    avg = sum(scores) / len(scores)
-    update_driver(driver_id, score=round(avg, 1))
-    return round(avg, 1)
+    auto_score = round(sum(scores) / len(scores), 1) if scores else 100.0
+
+    driver = get_driver(driver_id)
+    if not driver:
+        return auto_score
+    displayed_score = (
+        float(driver['manual_score'])
+        if driver.get('manual_score') is not None
+        else auto_score
+    )
+    update_driver(driver_id, auto_score=auto_score, score=displayed_score)
+    return displayed_score
 
 
 if __name__ == '__main__':

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}数据总览 - BWIH{% endblock %}
+{% block main_width %}max-w-none{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold mb-2">数据总览</h1>
+    <p class="text-gray-600">按 供应商 → 司机 → 任务，从左到右逐级查看</p>
+</div>
+
+<!-- 汇总信息始终可见，历史明细按选择逐级展开。 -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-3xl font-bold text-blue-600">{{ stats.total_carriers }}</div>
+        <div class="text-sm text-gray-600">供应商</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-3xl font-bold text-blue-600">{{ stats.total_drivers }}</div>
+        <div class="text-sm text-gray-600">司机</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-3xl font-bold text-blue-600">{{ stats.total_checkins }}</div>
+        <div class="text-sm text-gray-600">总任务数</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-3xl font-bold text-green-600">{{ stats.recent_checkins }}</div>
+        <div class="text-sm text-gray-600">近7天任务</div>
+    </div>
+</div>
+
+<div class="overview-explorer" id="overviewExplorer">
+    <!-- 第一级：供应商 -->
+    <section class="overview-column" id="carrierColumn">
+        <div class="overview-column-heading">
+            <div>
+                <span class="overview-step">1</span>
+                <span>供应商</span>
+            </div>
+            <span class="overview-count">{{ carriers|length }}</span>
+        </div>
+        <div class="overview-list">
+            {% for carrier in carriers %}
+            {% set carrier_key = carrier.id if carrier.id is not none else 'none' %}
+            <button type="button"
+                    class="overview-choice carrier-choice"
+                    data-carrier="{{ carrier_key }}"
+                    aria-expanded="false">
+                <span>
+                    <strong>{{ carrier.name }}</strong>
+                    <small>{{ carrier.drivers|length }} 位司机 · {{ carrier.checkin_count }} 个任务</small>
+                </span>
+                <span class="overview-chevron">›</span>
+            </button>
+            {% else %}
+            <div class="overview-empty">暂无供应商</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 第二级：所选供应商的司机 -->
+    <section class="overview-column" id="driverColumn">
+        <div class="overview-column-heading">
+            <div>
+                <span class="overview-step">2</span>
+                <span>司机</span>
+            </div>
+            <span class="overview-context" id="driverContext">未选择</span>
+        </div>
+        <div class="overview-placeholder" id="driverPlaceholder">
+            <span class="overview-placeholder-arrow">←</span>
+            请先选择左侧供应商
+        </div>
+
+        {% for carrier in carriers %}
+        {% set carrier_key = carrier.id if carrier.id is not none else 'none' %}
+        <div class="overview-list driver-panel" data-carrier-panel="{{ carrier_key }}" hidden>
+            {% for driver in carrier.drivers %}
+            <button type="button"
+                    class="overview-choice driver-choice"
+                    data-driver="{{ driver.id }}"
+                    data-driver-name="{{ driver.name }}"
+                    aria-expanded="false">
+                <span>
+                    <strong>{{ driver.name }}</strong>
+                    <small>
+                        评分 {{ driver.score|round|int }} · {{ driver.checkins|length }} 个任务
+                        {% if driver.phone %} · {{ driver.phone }}{% endif %}
+                    </small>
+                </span>
+                <span class="overview-chevron">›</span>
+            </button>
+            {% else %}
+            <div class="overview-empty">该供应商暂无司机</div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- 第三级：所选司机的历史任务 -->
+    <section class="overview-column overview-task-column" id="taskColumn">
+        <div class="overview-column-heading">
+            <div>
+                <span class="overview-step">3</span>
+                <span>任务记录</span>
+            </div>
+            <span class="overview-context" id="taskContext">未选择</span>
+        </div>
+        <div class="overview-placeholder" id="taskPlaceholder">
+            <span class="overview-placeholder-arrow">←</span>
+            选择司机后显示任务明细
+        </div>
+
+        {% for carrier in carriers %}
+        {% for driver in carrier.drivers %}
+        <div class="task-panel" data-driver-panel="{{ driver.id }}" hidden>
+            {% if driver.checkins %}
+            <div class="overview-task-summary">
+                <strong>{{ driver.name }}</strong>
+                <span>共 {{ driver.checkins|length }} 个任务</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm overview-task-table">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>MT任务编码</th>
+                            <th>线路</th>
+                            <th>车牌</th>
+                            <th>到达</th>
+                            <th>发车</th>
+                            <th>早/晚</th>
+                            <th>等待</th>
+                            <th>回货</th>
+                            <th>线路</th>
+                            <th>评分</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ch in driver.checkins %}
+                        <tr>
+                            <td>{{ ch.date }}</td>
+                            <td class="font-mono">{{ ch.dms_task_id or '-' }}</td>
+                            <td>{{ ch.route or '-' }}</td>
+                            <td>{{ ch.truck or '-' }}</td>
+                            <td>{{ ch.arrival_time or '-' }}</td>
+                            <td>{{ ch.departure_time or '-' }}</td>
+                            <td>
+                                {% if ch.late_minutes is not none %}
+                                    {% if ch.late_minutes > 0 %}
+                                    <span class="text-red-600">迟到</span>
+                                    {% else %}
+                                    <span class="text-green-600">准时</span>
+                                    {% endif %}
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>{% if ch.wait_minutes %}{{ ch.wait_minutes }}分{% else %}-{% endif %}</td>
+                            <td>
+                                {% if ch.needs_return_cargo %}
+                                    {% if ch.return_cargo_status == '已完成' %}
+                                    <span class="overview-badge success">已完成</span>
+                                    {% elif ch.return_cargo_status == '未完成' %}
+                                    <span class="overview-badge danger">未完成</span>
+                                    {% elif ch.return_cargo_status == '部分完成' %}
+                                    <span class="overview-badge warning">部分完成</span>
+                                    {% else %}
+                                    <span class="overview-badge neutral">待确认</span>
+                                    {% endif %}
+                                {% else %}-{% endif %}
+                            </td>
+                            <td>
+                                {% if ch.route_ok %}
+                                <span class="text-green-600">正确</span>
+                                {% else %}
+                                <span class="overview-badge danger">错误</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-semibold">
+                                {% if ch.score_given is not none %}{{ ch.score_given|round|int }}{% else %}-{% endif %}
+                            </td>
+                            <td><a href="/record/{{ ch.id }}" class="text-blue-600 hover:underline">查看</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="overview-empty">该司机暂无任务记录</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% endfor %}
+    </section>
+</div>
+
+<script>
+(() => {
+    const explorer = document.getElementById('overviewExplorer');
+    const carrierChoices = [...explorer.querySelectorAll('.carrier-choice')];
+    const driverChoices = [...explorer.querySelectorAll('.driver-choice')];
+    const driverPanels = [...explorer.querySelectorAll('.driver-panel')];
+    const taskPanels = [...explorer.querySelectorAll('.task-panel')];
+    const driverPlaceholder = document.getElementById('driverPlaceholder');
+    const taskPlaceholder = document.getElementById('taskPlaceholder');
+    const driverContext = document.getElementById('driverContext');
+    const taskContext = document.getElementById('taskContext');
+    const driverColumn = document.getElementById('driverColumn');
+    const taskColumn = document.getElementById('taskColumn');
+
+    const scrollToColumn = column => {
+        explorer.scrollTo({
+            left: Math.max(0, column.offsetLeft - explorer.offsetLeft),
+            behavior: 'smooth'
+        });
+    };
+
+    const resetTasks = () => {
+        driverChoices.forEach(choice => {
+            choice.classList.remove('is-active');
+            choice.setAttribute('aria-expanded', 'false');
+        });
+        taskPanels.forEach(panel => panel.hidden = true);
+        taskPlaceholder.hidden = false;
+        taskContext.textContent = '未选择';
+    };
+
+    carrierChoices.forEach(choice => {
+        choice.addEventListener('click', () => {
+            const carrierKey = choice.dataset.carrier;
+            carrierChoices.forEach(item => {
+                item.classList.toggle('is-active', item === choice);
+                item.setAttribute('aria-expanded', item === choice ? 'true' : 'false');
+            });
+            driverPanels.forEach(panel => {
+                panel.hidden = panel.dataset.carrierPanel !== carrierKey;
+            });
+            driverPlaceholder.hidden = true;
+            driverContext.textContent = choice.querySelector('strong').textContent;
+            resetTasks();
+            scrollToColumn(driverColumn);
+        });
+    });
+
+    driverChoices.forEach(choice => {
+        choice.addEventListener('click', () => {
+            const driverId = choice.dataset.driver;
+            driverChoices.forEach(item => {
+                item.classList.toggle('is-active', item === choice);
+                item.setAttribute('aria-expanded', item === choice ? 'true' : 'false');
+            });
+            taskPanels.forEach(panel => {
+                panel.hidden = panel.dataset.driverPanel !== driverId;
+            });
+            taskPlaceholder.hidden = true;
+            taskContext.textContent = choice.dataset.driverName;
+            scrollToColumn(taskColumn);
+        });
+    });
+})();
+</script>
+{% endblock %}

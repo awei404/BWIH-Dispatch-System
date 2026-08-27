@@ -492,7 +492,35 @@ def driver_detail(driver_id):
     return render_template('driver_detail.html', 
                            driver=driver, 
                            checkins=checkins,
-                           carriers=db.get_carriers())
+                           carriers=db.get_carriers(),
+                           score_adjustments=db.get_driver_score_adjustments(driver_id))
+
+
+@app.route('/driver/<int:driver_id>/score', methods=['POST'])
+def update_driver_manual_score(driver_id):
+    driver = db.get_driver(driver_id)
+    if not driver:
+        return redirect(url_for('drivers'))
+
+    action = request.form.get('score_action', 'set')
+    reason = request.form.get('score_reason', '').strip()
+
+    if action == 'restore_auto':
+        db.clear_driver_manual_score(driver_id, reason or '恢复自动评分')
+        return redirect(url_for('driver_detail', driver_id=driver_id))
+
+    try:
+        new_score = float(request.form.get('manual_score', ''))
+    except (TypeError, ValueError):
+        return redirect(url_for('driver_detail', driver_id=driver_id, score_error='请输入0到100之间的评分'))
+
+    if not 0 <= new_score <= 100:
+        return redirect(url_for('driver_detail', driver_id=driver_id, score_error='评分必须在0到100之间'))
+    if not reason:
+        return redirect(url_for('driver_detail', driver_id=driver_id, score_error='请填写评分调整原因'))
+
+    db.set_driver_manual_score(driver_id, new_score, reason)
+    return redirect(url_for('driver_detail', driver_id=driver_id))
 
 
 # ========== 供应商管理 ==========
@@ -536,6 +564,76 @@ def carrier_detail(carrier_id):
         return redirect(url_for('carrier_detail', carrier_id=carrier_id))
     
     return render_template('carrier_form.html', carrier=carrier)
+
+
+# ========== 数据总览 ==========
+
+@app.route('/data')
+def data_view():
+    from datetime import timedelta
+    
+    carriers_data = []
+    carriers = db.get_carriers()
+    
+    for carrier in carriers:
+        carrier_info = {
+            'id': carrier['id'],
+            'name': carrier['name'],
+            'drivers': [],
+            'checkin_count': 0
+        }
+        
+        # 获取该供应商的司机
+        all_drivers = db.get_drivers()
+        for driver in all_drivers:
+            if driver.get('carrier_id') == carrier['id']:
+                driver_checkins = db.get_checkins_by_driver(driver['id'], days=365)
+                driver_info = {
+                    'id': driver['id'],
+                    'name': driver['name'],
+                    'phone': driver.get('phone', ''),
+                    'score': driver.get('score', 100),
+                    'checkins': driver_checkins
+                }
+                carrier_info['drivers'].append(driver_info)
+                carrier_info['checkin_count'] += len(driver_checkins)
+        
+        carriers_data.append(carrier_info)
+    
+    # 无供应商的司机
+    no_carrier = {
+        'id': None,
+        'name': '(无供应商)',
+        'drivers': [],
+        'checkin_count': 0
+    }
+    all_drivers = db.get_drivers()
+    for driver in all_drivers:
+        if not driver.get('carrier_id'):
+            driver_checkins = db.get_checkins_by_driver(driver['id'], days=365)
+            driver_info = {
+                'id': driver['id'],
+                'name': driver['name'],
+                'phone': driver.get('phone', ''),
+                'score': driver.get('score', 100),
+                'checkins': driver_checkins
+            }
+            no_carrier['drivers'].append(driver_info)
+            no_carrier['checkin_count'] += len(driver_checkins)
+    
+    if no_carrier['drivers']:
+        carriers_data.append(no_carrier)
+    
+    # 统计
+    week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+    stats = {
+        'total_carriers': len(carriers),
+        'total_drivers': len(all_drivers),
+        'total_checkins': sum(c['checkin_count'] for c in carriers_data),
+        'recent_checkins': len([ch for c in carriers_data for d in c['drivers'] for ch in d['checkins'] if ch.get('date', '') >= week_ago])
+    }
+    
+    return render_template('data_view.html', carriers=carriers_data, stats=stats)
 
 
 # ========== 静态文件：上传的图片 ==========
