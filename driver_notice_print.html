@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>司机须知｜打印版</title>
+  <style>
+    :root { --ink:#172033; --muted:#596579; --line:#d8dee8; --blue:#1d4ed8; --amber:#92400e; --red:#b91c1c; --paper:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#eef2f7; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,"Microsoft YaHei",sans-serif; }
+    .controls { max-width:8.15in; margin:20px auto 12px; display:flex; justify-content:space-between; gap:16px; align-items:center; }
+    .language-switch { display:flex; gap:7px; flex-wrap:wrap; }
+    button { appearance:none; border:1px solid #cbd5e1; color:#334155; background:white; border-radius:7px; padding:8px 13px; font-size:14px; font-weight:650; cursor:pointer; }
+    button:hover, button.active { color:white; background:var(--blue); border-color:var(--blue); }
+    .print-button { background:#172033; color:#fff; border-color:#172033; }
+    .paper { max-width:8.5in; margin:0 auto 30px; padding:.45in .5in; background:var(--paper); box-shadow:0 5px 24px rgba(15,23,42,.12); }
+    .masthead { border-bottom:3px solid var(--ink); padding-bottom:18px; margin-bottom:20px; display:flex; justify-content:space-between; gap:18px; align-items:flex-end; }
+    .eyebrow { margin:0 0 6px; font-size:10px; font-weight:800; letter-spacing:1.2px; color:var(--blue); }
+    h1 { font-size:28px; line-height:1.15; margin:0; letter-spacing:-.4px; }
+    .subtitle { margin:8px 0 0; color:var(--muted); font-size:14px; }
+    .print-note { flex:0 0 auto; color:#64748b; font-size:11px; text-align:right; }
+    h2 { font-size:16px; margin:0 0 10px; }
+    h3 { margin:0; font-size:14px; }
+    p { margin:0; line-height:1.5; }
+    .section { margin-top:18px; break-inside:avoid; }
+    .steps { border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+    .step { display:grid; grid-template-columns:26px 1fr; gap:11px; padding:12px 14px; border-top:1px solid var(--line); }
+    .step:first-child { border-top:0; }
+    .num { width:24px; height:24px; display:grid; place-items:center; border-radius:50%; background:var(--ink); color:white; font-size:12px; font-weight:800; }
+    .step p { color:var(--muted); font-size:13px; margin-top:3px; }
+    .notice { border-left:4px solid #d97706; background:#fffbeb; padding:11px 14px; color:#78350f; font-size:13px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; vertical-align:top; padding:9px 10px; border:1px solid var(--line); }
+    th { background:#f1f5f9; font-size:12px; }
+    td:first-child { font-weight:750; white-space:nowrap; }
+    .ric-row td { background:#fffbeb; }
+    .ric-note { margin-top:8px; padding:9px 11px; border:1px solid #fcd34d; background:#fffbeb; color:#78350f; font-size:12.5px; }
+    .two-col { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; }
+    .card { border:1px solid var(--line); border-radius:7px; padding:13px 14px; }
+    .return-list { margin:8px 0 0; padding-left:20px; line-height:1.65; font-size:13px; }
+    .return-list li::marker { color:var(--blue); }
+    .deadline { background:#eff6ff; border-color:#bfdbfe; }
+    .deadline strong { display:block; margin:4px 0 6px; color:#1e3a8a; font-size:17px; }
+    .deadline p { color:#1e40af; font-size:13px; }
+    .locations { display:grid; grid-template-columns:repeat(2, 1fr); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+    .location { padding:11px 13px; border-right:1px solid var(--line); border-top:1px solid var(--line); }
+    .location:nth-child(-n+2) { border-top:0; }
+    .location:nth-child(even) { border-right:0; }
+    .location small { display:block; color:var(--muted); margin-bottom:4px; }
+    .location strong { font-size:13px; }
+    .location span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+    .broker { border:1px solid #cbd5e1; background:#f8fafc; border-radius:7px; padding:13px 14px; font-size:13px; }
+    .strict { margin-top:14px; border:2px solid var(--red); border-radius:7px; padding:13px 14px; color:#7f1d1d; }
+    .strict h2 { color:var(--red); margin-bottom:4px; }
+    .footer { border-top:1px solid var(--line); margin-top:22px; padding-top:10px; color:#64748b; font-size:10px; text-align:center; }
+    @media (max-width:650px) { .controls { margin:12px; align-items:flex-start; flex-direction:column; } .paper { margin:0; padding:24px 20px; } .masthead,.two-col { display:block; } .print-note { margin-top:12px; text-align:left; } .deadline { margin-top:14px; } }
+    @media print { @page { size:letter; margin:.35in; } body { background:white; } .no-print { display:none !important; } .paper { max-width:none; margin:0; padding:0; box-shadow:none; } .masthead { margin-bottom:14px; } .section { margin-top:13px; } .step { padding:8px 10px; } h1 { font-size:24px; } h2 { font-size:14px; } .subtitle, .step p, .notice, td, th, .return-list, .deadline p, .broker, .strict { font-size:11px; } .deadline strong { font-size:14px; } .footer { margin-top:14px; } }
+  </style>
+</head>
+<body>
+  <div class="controls no-print">
+    <div class="language-switch" aria-label="Language selection">
+      <button class="active" data-lang="zh">中文</button><button data-lang="en">English</button><button data-lang="es">Español</button>
+    </div>
+    <button class="print-button" onclick="window.print()">打印 / Print</button>
+  </div>
+  <main class="paper" id="document"></main>
+  <script>
+    const notices = {
+      zh: {
+        lang:'zh-CN', eyebrow:'DRIVER INSTRUCTIONS', title:'司机须知', subtitle:'请按以下流程完成运输、等待卸货和回货交接。', print:'打印当前语言版本',
+        workflow:'标准作业流程', steps:[['按 BOL 上的 ETA 到达站点','请以 BOL 上标注的 ETA 为准到站；站点详细地址及导航信息，以调度后续通知为准。'],['到站后等待劳务卸车','即使劳务人员尚未到岗，也必须留在现场等待；请勿自行提前离开。'],['确认卸货完成后离站','如现场有异常、无人对接或无法卸货，请先联系您的经纪人。']],
+        reminder:'重要提醒', reminderText:'不得因现场暂时没有劳务人员卸车而提前离开。请等待劳务到岗，或联系您的经纪人。', stationTitle:'各站点劳务上班时间', stationNote:'以下为暂定时间；如有变更，以调度当天通知为准。', headers:['站点','劳务开始上班时间','卸货要求'], stations:[['ORF','凌晨 1:00','等待劳务卸车'],['IAD','凌晨 1:00','等待劳务卸车'],['DCA','凌晨 0:30','等待劳务卸车'],['RIC','晚上 9:00','通常等待劳务；如调度或现场明确通知，司机可能需要自行卸车。']], ric:'RIC 备注：RIC 偶尔需要司机自行卸车。是否自行卸车，请以调度或现场当日安排为准；未确认前，请勿擅自卸车或离开。',
+        returnTitle:'往返车辆：回货要求', returnLead:'往返车辆必须装回货。请确认以下物品全部带回：', returns:['包裹箱子','黑色塑料托盘','纸皮','站点实际要求装回的任何其他物品'], returnRule:'只要站点要求装回，司机必须全部装回。', timeLabel:'返回时间', time:'次日 9:00—12:00', timeNote:'请在上午 9:00 后、中午 12:00 前返回，并完成回货卸载。', unloadTitle:'回货卸载位置', locations:[['卸货道口','8—14 道口','选择空道口卸货'],['包裹箱子','调度处','集中放置'],['黑色塑料托盘','卸货道口门口','整齐码放'],['纸皮','2 道口墙边','请勿放错位置']], brokerTitle:'问题请先联系您的经纪人', broker:'如有任何问题、异常或无法处理的情况，请联系您的经纪人，由经纪人反馈给我们。未确认前，请勿自行决定或离开站点。', strict:'请严格遵守上述要求', consequence:'如不遵守以上规定，我们将直接封禁该司机。'
+      },
+      en: {
+        lang:'en', eyebrow:'DRIVER INSTRUCTIONS', title:'Driver Instructions', subtitle:'Follow this process for delivery, unloading, and return cargo.', print:'Print the current language version',
+        workflow:'Standard Process', steps:[['Arrive according to the ETA on the BOL','Arrive based on the ETA listed on the BOL. Detailed site address and navigation information will be provided by dispatch.'],['Wait for the unloading crew after arriving','You must remain on site if the unloading crew has not arrived yet. Do not leave early on your own.'],['Leave only after unloading is complete','If there is an issue, no one is available to receive the load, or unloading cannot be completed, contact your broker first.']],
+        reminder:'Important Reminder', reminderText:'Do not leave early because the unloading crew is not yet available. Wait for the crew or contact your broker.', stationTitle:'Site Unloading Crew Start Times', stationNote:'These are tentative times. If there is a change, follow dispatch’s notice for that day.', headers:['Site','Crew start time','Unloading requirement'], stations:[['ORF','1:00 AM','Wait for the unloading crew'],['IAD','1:00 AM','Wait for the unloading crew'],['DCA','12:30 AM','Wait for the unloading crew'],['RIC','9:00 PM','Normally wait for the crew. The driver may need to unload only when dispatch or the site clearly instructs it.']], ric:'RIC note: Drivers may occasionally need to unload themselves at RIC. Follow the day’s direction from dispatch or the site. Do not unload or leave without confirmation.',
+        returnTitle:'Round Trips: Return Cargo Requirements', returnLead:'Round-trip vehicles must load return cargo. Confirm that all of the following items are brought back:', returns:['Package boxes','Black plastic pallets','Cardboard','Any other items the site requires to be returned'], returnRule:'If the site asks for an item to be loaded for return, the driver must bring it back.', timeLabel:'Return time', time:'Next day, 9:00 AM—12:00 PM', timeNote:'Return after 9:00 AM and before 12:00 PM the next day, and complete return-cargo unloading.', unloadTitle:'Return Cargo Unloading Locations', locations:[['Unloading bay','Bays 8—14','Use an available bay'],['Package boxes','Dispatch area','Place them together'],['Black plastic pallets','At the unloading-bay entrance','Stack neatly'],['Cardboard','Against the wall by Bay 2','Do not place it in the wrong location']], brokerTitle:'Contact Your Broker First', broker:'For any question, issue, or exception, contact your broker. Your broker will report the matter to us. Do not make a decision or leave the site until it is confirmed.', strict:'Strict Compliance Is Required', consequence:'Failure to follow these requirements will result in the driver being banned immediately.'
+      },
+      es: {
+        lang:'es', eyebrow:'INSTRUCCIONES PARA CONDUCTORES', title:'Instrucciones para conductores', subtitle:'Siga este proceso para la entrega, la descarga y la carga de retorno.', print:'Imprima la versión del idioma actual',
+        workflow:'Proceso estándar', steps:[['Llegue según la ETA indicada en el BOL','Llegue de acuerdo con la ETA indicada en el BOL. Dispatch proporcionará la dirección detallada y la información de navegación del sitio.'],['Espere al personal de descarga al llegar','Si el personal de descarga aún no ha llegado, debe permanecer en el sitio. No se retire antes por su cuenta.'],['Retírese solo después de completar la descarga','Si hay un problema, no hay nadie disponible para recibir la carga o no se puede descargar, contacte primero a su broker.']],
+        reminder:'Recordatorio importante', reminderText:'No se retire antes porque el personal de descarga aún no está disponible. Espere al personal o contacte a su broker.', stationTitle:'Horarios de inicio del personal de descarga', stationNote:'Estos horarios son provisionales. Si hay cambios, siga el aviso de Dispatch del día.', headers:['Sitio','Inicio del personal','Requisito de descarga'], stations:[['ORF','1:00 a. m.','Espere al personal de descarga'],['IAD','1:00 a. m.','Espere al personal de descarga'],['DCA','12:30 a. m.','Espere al personal de descarga'],['RIC','9:00 p. m.','Normalmente espere al personal. El conductor podrá descargar solo si Dispatch o el sitio lo indican claramente.']], ric:'Nota sobre RIC: En ocasiones, el conductor puede tener que descargar por sí mismo en RIC. Siga la indicación del día de Dispatch o del sitio. No descargue ni se retire sin confirmación.',
+        returnTitle:'Viajes de ida y vuelta: requisitos de carga de retorno', returnLead:'Los vehículos de ida y vuelta deben cargar la carga de retorno. Confirme que todos estos artículos regresen:', returns:['Cajas de paquetes','Tarimas plásticas negras','Cartón','Cualquier otro artículo que el sitio exija devolver'], returnRule:'Si el sitio solicita cargar un artículo para retorno, el conductor debe traerlo de vuelta.', timeLabel:'Hora de regreso', time:'Al día siguiente, de 9:00 a. m. a 12:00 p. m.', timeNote:'Regrese después de las 9:00 a. m. y antes de las 12:00 p. m. del día siguiente, y complete la descarga de la carga de retorno.', unloadTitle:'Lugares para descargar la carga de retorno', locations:[['Andén de descarga','Andenes 8—14','Use un andén disponible'],['Cajas de paquetes','Área de Dispatch','Colóquelas juntas'],['Tarimas plásticas negras','En la entrada del andén de descarga','Apílelas ordenadamente'],['Cartón','Contra la pared junto al andén 2','No lo coloque en un lugar incorrecto']], brokerTitle:'Contacte primero a su broker', broker:'Para cualquier pregunta, problema o excepción, contacte a su broker. Su broker nos comunicará el caso. No tome una decisión ni abandone el sitio hasta recibir confirmación.', strict:'Se exige cumplimiento estricto', consequence:'Si no cumple estos requisitos, el conductor será bloqueado inmediatamente.'
+      }
+    };
+    const esc = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    function render(language) {
+      const n = notices[language]; document.documentElement.lang = n.lang; document.title = n.title + '｜打印版';
+      document.getElementById('document').innerHTML = `
+        <header class="masthead"><div><p class="eyebrow">${esc(n.eyebrow)}</p><h1>${esc(n.title)}</h1><p class="subtitle">${esc(n.subtitle)}</p></div><p class="print-note">${esc(n.print)}</p></header>
+        <section class="section"><h2>${esc(n.workflow)}</h2><div class="steps">${n.steps.map((s,i)=>`<div class="step"><span class="num">${i+1}</span><div><h3>${esc(s[0])}</h3><p>${esc(s[1])}</p></div></div>`).join('')}</div></section>
+        <section class="section"><div class="notice"><strong>${esc(n.reminder)}：</strong>${esc(n.reminderText)}</div></section>
+        <section class="section"><h2>${esc(n.stationTitle)}</h2><p style="font-size:12px;color:#596579;margin:-4px 0 8px">${esc(n.stationNote)}</p><table><thead><tr>${n.headers.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${n.stations.map(row=>`<tr${row[0]==='RIC'?' class="ric-row"':''}>${row.map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</tbody></table><div class="ric-note">${esc(n.ric)}</div></section>
+        <section class="section two-col"><div class="card"><h2>${esc(n.returnTitle)}</h2><p style="font-size:13px">${esc(n.returnLead)}</p><ul class="return-list">${n.returns.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p style="font-size:13px;font-weight:750;margin-top:8px">${esc(n.returnRule)}</p></div><div class="card deadline"><h2>${esc(n.timeLabel)}</h2><strong>${esc(n.time)}</strong><p>${esc(n.timeNote)}</p></div></section>
+        <section class="section"><h2>${esc(n.unloadTitle)}</h2><div class="locations">${n.locations.map(x=>`<div class="location"><small>${esc(x[0])}</small><strong>${esc(x[1])}</strong><span>${esc(x[2])}</span></div>`).join('')}</div></section>
+        <section class="section"><div class="broker"><h2>${esc(n.brokerTitle)}</h2><p>${esc(n.broker)}</p></div><div class="strict"><h2>${esc(n.strict)}</h2><p><strong>${esc(n.consequence)}</strong></p></div></section>
+        <footer class="footer">BWIH · ${esc(n.title)}</footer>`;
+      document.querySelectorAll('[data-lang]').forEach(button => button.classList.toggle('active', button.dataset.lang === language));
+    }
+    document.querySelectorAll('[data-lang]').forEach(button => button.addEventListener('click', () => render(button.dataset.lang)));
+    render('zh');
+  </script>
+</body>
+</html>
