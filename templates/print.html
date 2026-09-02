@@ -189,6 +189,43 @@
             color: #666;
             margin-top: 5px;
         }
+
+        /* 司机须知签字确认 */
+        .notice-acknowledgement {
+            margin: 18px 0 0;
+            padding: 16px;
+            border: 3px solid #000;
+            page-break-inside: avoid;
+        }
+        .notice-acknowledgement h2 {
+            margin-bottom: 8px;
+            font-size: 18px;
+            text-align: center;
+        }
+        .notice-statement {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .signature-row {
+            display: flex;
+            gap: 28px;
+            margin-top: 30px;
+        }
+        .signature-field {
+            flex: 2;
+        }
+        .signature-field.date-time {
+            flex: 1;
+        }
+        .signature-line {
+            height: 34px;
+            border-bottom: 2px solid #000;
+        }
+        .signature-label {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #333;
+        }
         
         @media print {
             .print-bar {
@@ -203,6 +240,10 @@
             }
             .return-cargo .value {
                 font-size: 60px;
+            }
+            .notice-acknowledgement {
+                margin-top: 12px;
+                padding: 12px;
             }
         }
     </style>
@@ -295,6 +336,25 @@
                 {% else %}
                     <div class="license-placeholder">无驾照照片</div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- 司机须知签字确认 -->
+        <div class="notice-acknowledgement">
+            <h2>司机须知确认 / DRIVER NOTICE ACKNOWLEDGEMENT</h2>
+            <p class="notice-statement">
+                本人确认已阅读并理解《司机须知》，并同意遵守其中的操作要求。<br>
+                I confirm that I have read and understood the Driver Notice and agree to follow its requirements.
+            </p>
+            <div class="signature-row">
+                <div class="signature-field">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">司机签字 / DRIVER SIGNATURE（{{ checkin.driver_name }}）</div>
+                </div>
+                <div class="signature-field date-time">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">日期及时间 / DATE &amp; TIME</div>
+                </div>
             </div>
         </div>
     </div>
