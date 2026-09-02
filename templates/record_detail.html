@@ -139,10 +139,10 @@
             <textarea name="notes" rows="2" class="w-full border rounded px-2 py-1">{{ checkin.notes or '' }}</textarea>
         </div>
 
-        {% if checkin.license_photo %}
+        {% if checkin.effective_license_photo %}
         <div>
             <label class="block text-sm text-gray-600 mb-2">驾照照片</label>
-            <img src="/uploads/{{ checkin.license_photo }}" alt="驾照" class="max-w-xs rounded border">
+            <img src="/uploads/{{ checkin.effective_license_photo }}" alt="驾照" class="max-w-xs rounded border">
         </div>
         {% endif %}
 

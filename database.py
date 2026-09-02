@@ -299,7 +299,9 @@ def get_checkins_by_driver(driver_id, days=30):
 def get_checkin(checkin_id):
     with get_db() as conn:
         row = conn.execute('''
-            SELECT ch.*, d.name as driver_name, c.name as carrier_name
+            SELECT ch.*, d.name as driver_name, c.name as carrier_name,
+                   d.license_photo as driver_license_photo,
+                   COALESCE(NULLIF(ch.license_photo, ''), d.license_photo, '') as effective_license_photo
             FROM checkins ch
             JOIN drivers d ON ch.driver_id = d.id
             LEFT JOIN carriers c ON ch.carrier_id = c.id

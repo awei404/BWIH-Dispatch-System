@@ -330,8 +330,8 @@
                 {% endif %}
             </div>
             <div class="info-right">
-                {% if checkin.license_photo %}
-                    <img src="/uploads/{{ checkin.license_photo }}" alt="驾照" class="license-photo">
+                {% if checkin.effective_license_photo %}
+                    <img src="/uploads/{{ checkin.effective_license_photo }}" alt="驾照" class="license-photo">
                     <div class="photo-label">司机驾照</div>
                 {% else %}
                     <div class="license-placeholder">无驾照照片</div>

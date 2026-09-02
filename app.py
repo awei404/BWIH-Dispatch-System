@@ -65,22 +65,11 @@ def index():
 def checkin():
     if request.method == 'POST':
         driver_id = request.form.get('driver_id')
-        
-        # 如果是新司机
-        if request.form.get('new_driver_name'):
-            carrier_id = request.form.get('carrier_id') or None
-            if carrier_id:
-                carrier_id = int(carrier_id)
-            driver_id = db.create_driver(
-                name=request.form['new_driver_name'],
-                phone=request.form.get('new_driver_phone', ''),
-                carrier_id=carrier_id
-            )
-        
-        if not driver_id:
+        new_driver_name = request.form.get('new_driver_name', '').strip()
+        if not driver_id and not new_driver_name:
             return redirect(url_for('checkin'))
-        
-        # 处理驾照图片
+
+        # 驾照照片以司机档案为主：Check-in 上传的新照片会同步回司机档案。
         license_photo = ''
         if 'license_photo' in request.files:
             file = request.files['license_photo']
@@ -89,13 +78,35 @@ def checkin():
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(filepath)
                 license_photo = filename
-        
+
+        # 如果是新司机
+        if new_driver_name:
+            carrier_id = request.form.get('carrier_id') or None
+            if carrier_id:
+                carrier_id = int(carrier_id)
+            driver_id = db.create_driver(
+                name=new_driver_name,
+                phone=request.form.get('new_driver_phone', ''),
+                carrier_id=carrier_id,
+                license_photo=license_photo
+            )
+
+        driver_id = int(driver_id)
+        driver = db.get_driver(driver_id)
+        if license_photo:
+            # 在 Check-in 补录或更换照片后，后续记录自动使用新照片。
+            if driver and driver.get('license_photo') != license_photo:
+                db.update_driver(driver_id, license_photo=license_photo)
+        elif driver:
+            # 已有司机无需重复上传，直接沿用档案照片。
+            license_photo = driver.get('license_photo') or ''
+
         carrier_id = request.form.get('carrier_id') or None
         if carrier_id:
             carrier_id = int(carrier_id)
-        
+
         checkin_id = db.create_checkin(
-            driver_id=int(driver_id),
+            driver_id=driver_id,
             carrier_id=carrier_id,
             scheduled_time=request.form.get('scheduled_time', ''),
             arrival_time=request.form.get('arrival_time', ''),

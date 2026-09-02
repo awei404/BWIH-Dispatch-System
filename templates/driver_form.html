@@ -13,7 +13,7 @@
 <div class="bg-white rounded shadow p-6">
     <h1 class="text-xl font-bold mb-6">{% if driver %}编辑司机{% else %}新增司机{% endif %}</h1>
     
-    <form method="post" class="space-y-4">
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-600 mb-1">姓名 *</label>
@@ -40,6 +40,20 @@
                        placeholder="如 IAD,DCA,RIC"
                        class="w-full border rounded px-2 py-1">
             </div>
+        </div>
+        <div class="border-t pt-4">
+            <label class="block text-sm text-gray-600 mb-1">驾照照片</label>
+            <p class="text-sm text-gray-500 mb-3">只需在司机档案中录入一次，之后 Check-in 会自动关联。</p>
+            <input type="file" name="license_photo" accept="image/*"
+                   class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded
+                          file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100">
+            {% if driver and driver.license_photo %}
+            <div class="mt-3 flex items-start gap-3">
+                <img src="/uploads/{{ driver.license_photo }}" alt="现有驾照照片" class="h-24 rounded border">
+                <span class="text-sm text-green-700">档案中已有照片；不选择新文件会保留原照片。</span>
+            </div>
+            {% endif %}
         </div>
         <div class="flex justify-end">
             <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">

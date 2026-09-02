@@ -20,7 +20,8 @@
                     <select name="driver_id" id="driver_select" class="w-full border rounded px-3 py-2 text-lg">
                         <option value="">-- 选择 --</option>
                         {% for d in drivers %}
-                        <option value="{{ d.id }}" data-carrier="{{ d.carrier_id or '' }}">
+                        <option value="{{ d.id }}" data-carrier="{{ d.carrier_id or '' }}"
+                                data-license-photo="{{ d.license_photo or '' }}">
                             {{ d.name }}{% if d.carrier_name %} ({{ d.carrier_name }}){% endif %}
                         </option>
                         {% endfor %}
@@ -141,6 +142,17 @@
         <!-- 驾照 -->
         <div class="border-b pb-6">
             <h2 class="font-semibold mb-4">司机驾照</h2>
+            <div id="license_profile_status" class="mb-4 rounded-lg border bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                选择已有司机后，系统会自动使用司机档案中的驾照照片。
+            </div>
+            <div id="license_profile_preview" class="hidden mb-4 items-start gap-4">
+                <img id="license_profile_image" src="" alt="司机档案驾照" class="h-24 rounded border bg-white">
+                <div class="pt-2 text-green-700">
+                    <div class="font-semibold">档案中已有驾照照片</div>
+                    <div class="text-sm">本次 Check-in 无需再次上传。</div>
+                </div>
+            </div>
+            <label class="block text-sm text-gray-600 mb-2">补充或更换照片（选填）</label>
             <input type="file" name="license_photo" accept="image/*"
                    class="block w-full text-lg
                           file:mr-4 file:py-3 file:px-6 file:rounded 
@@ -175,9 +187,27 @@
 document.getElementById('driver_select').addEventListener('change', function() {
     const selected = this.options[this.selectedIndex];
     const carrierId = selected.dataset.carrier;
+    const licensePhoto = selected.dataset.licensePhoto;
+    const status = document.getElementById('license_profile_status');
+    const preview = document.getElementById('license_profile_preview');
+    const image = document.getElementById('license_profile_image');
     if (carrierId) {
         const radio = document.querySelector(`input[name="carrier_id"][value="${carrierId}"]`);
         if (radio) radio.checked = true;
+    }
+    if (licensePhoto) {
+        status.classList.add('hidden');
+        preview.classList.remove('hidden');
+        preview.classList.add('flex');
+        image.src = `/uploads/${encodeURIComponent(licensePhoto)}`;
+    } else {
+        preview.classList.add('hidden');
+        preview.classList.remove('flex');
+        image.removeAttribute('src');
+        status.classList.remove('hidden');
+        status.textContent = selected.value
+            ? '这位司机的档案中还没有驾照照片，可在下方补充一次；保存后将自动关联到司机档案。'
+            : '选择已有司机后，系统会自动使用司机档案中的驾照照片。';
     }
 });
 </script>
