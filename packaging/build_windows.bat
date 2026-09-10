@@ -7,6 +7,7 @@ python -m PyInstaller --noconfirm --clean --onedir --console ^
   --icon "packaging\assets\bwih-dispatch.ico" ^
   --add-data "templates;templates" ^
   --add-data "static;static" ^
+  --add-data "data;data" ^
   --hidden-import openpyxl ^
   desktop_app.py
 

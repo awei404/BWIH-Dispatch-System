@@ -1,3 +1,5 @@
+import json
+import os
 import sqlite3
 from datetime import datetime, date, timedelta
 from contextlib import contextmanager
@@ -146,7 +148,168 @@ def init_db():
         if 'manual_score_updated_at' not in driver_columns:
             conn.execute('ALTER TABLE drivers ADD COLUMN manual_score_updated_at DATETIME')
         conn.execute('UPDATE drivers SET auto_score = score WHERE auto_score IS NULL')
+    import_historical_seed()
     print(f"数据库已初始化: {config.DATABASE_PATH}")
+
+
+def normalize_driver_name(name):
+    """Normalize punctuation, spaces and letter case for historical-name matching."""
+    return ''.join(char.casefold() for char in str(name or '') if char.isalnum())
+
+
+def import_historical_seed(seed_path=None):
+    """Merge the bundled shared history without duplicating MT task IDs.
+
+    Existing task scores, driver assignments and manually recorded outcomes are
+    preserved. The supplied dispatch date is authoritative so the 03:00
+    operational-day rule is applied consistently on every computer.
+    """
+    seed_path = seed_path or config.HISTORICAL_SEED_PATH
+    if not os.path.exists(seed_path):
+        return {'inserted': 0, 'existing': 0, 'total': 0}
+
+    try:
+        with open(seed_path, 'r', encoding='utf-8') as seed_file:
+            seed = json.load(seed_file)
+    except (OSError, ValueError, TypeError) as error:
+        print(f"历史数据包无法读取: {error}")
+        return {'inserted': 0, 'existing': 0, 'total': 0}
+
+    records = seed.get('records') or []
+    aliases = seed.get('driver_aliases') or {}
+    inserted = 0
+    existing = 0
+    affected_driver_ids = set()
+
+    with get_db() as conn:
+        carrier_ids = {
+            str(row['name']).strip().casefold(): row['id']
+            for row in conn.execute('SELECT id, name FROM carriers')
+        }
+        drivers = [dict(row) for row in conn.execute(
+            'SELECT id, name, carrier_id, usual_routes FROM drivers'
+        )]
+        driver_ids = {normalize_driver_name(row['name']): row['id'] for row in drivers}
+        driver_rows = {row['id']: row for row in drivers}
+
+        for record in records:
+            task_id = str(record.get('task_id') or '').strip()
+            driver_name = str(record.get('driver') or '').strip()
+            record_date = str(record.get('date') or '').strip()
+            if not task_id or not driver_name or not record_date:
+                continue
+
+            carrier_name = str(record.get('carrier') or '').strip()
+            carrier_id = carrier_ids.get(carrier_name.casefold()) if carrier_name else None
+            if carrier_name and carrier_id is None:
+                cursor = conn.execute('INSERT INTO carriers (name) VALUES (?)', (carrier_name,))
+                carrier_id = cursor.lastrowid
+                carrier_ids[carrier_name.casefold()] = carrier_id
+
+            existing_task = conn.execute(
+                'SELECT id, driver_id FROM checkins WHERE dms_task_id = ? LIMIT 1',
+                (task_id,),
+            ).fetchone()
+            if existing_task:
+                conn.execute('''
+                    UPDATE checkins
+                    SET date = ?,
+                        route = CASE WHEN COALESCE(route, '') = '' THEN ? ELSE route END,
+                        departure_time = CASE WHEN COALESCE(departure_time, '') = '' THEN ? ELSE departure_time END,
+                        truck = CASE WHEN COALESCE(truck, '') = '' THEN ? ELSE truck END,
+                        dock = CASE WHEN COALESCE(dock, '') = '' THEN ? ELSE dock END,
+                        needs_return_cargo = CASE WHEN ? = 1 THEN 1 ELSE needs_return_cargo END,
+                        dms_match_confirmed = 1,
+                        score_given = COALESCE(score_given, ?)
+                    WHERE id = ?
+                ''', (
+                    record_date,
+                    str(record.get('route') or ''),
+                    str(record.get('departure_time') or ''),
+                    str(record.get('truck') or ''),
+                    str(record.get('dock') or ''),
+                    int(bool(record.get('needs_return_cargo'))),
+                    float(record.get('score_given', 100.0)),
+                    existing_task['id'],
+                ))
+                affected_driver_ids.add(existing_task['driver_id'])
+                existing += 1
+                continue
+
+            lookup_names = [driver_name] + list(aliases.get(driver_name) or [])
+            driver_id = next(
+                (driver_ids.get(normalize_driver_name(name)) for name in lookup_names
+                 if driver_ids.get(normalize_driver_name(name)) is not None),
+                None,
+            )
+            route = str(record.get('route') or '').strip()
+
+            if driver_id is None:
+                cursor = conn.execute('''
+                    INSERT INTO drivers (name, carrier_id, usual_routes)
+                    VALUES (?, ?, ?)
+                ''', (driver_name, carrier_id, route))
+                driver_id = cursor.lastrowid
+                row = {
+                    'id': driver_id,
+                    'name': driver_name,
+                    'carrier_id': carrier_id,
+                    'usual_routes': route,
+                }
+                driver_ids[normalize_driver_name(driver_name)] = driver_id
+                driver_rows[driver_id] = row
+            else:
+                driver = driver_rows[driver_id]
+                updates = []
+                values = []
+                if driver['name'] != driver_name and driver['name'] in (aliases.get(driver_name) or []):
+                    updates.append('name = ?')
+                    values.append(driver_name)
+                    driver_ids.pop(normalize_driver_name(driver['name']), None)
+                    driver_ids[normalize_driver_name(driver_name)] = driver_id
+                    driver['name'] = driver_name
+                if carrier_id is not None and driver.get('carrier_id') is None:
+                    updates.append('carrier_id = ?')
+                    values.append(carrier_id)
+                    driver['carrier_id'] = carrier_id
+                routes = [value.strip() for value in (driver.get('usual_routes') or '').split(',') if value.strip()]
+                if route and route not in routes:
+                    routes.append(route)
+                    updates.append('usual_routes = ?')
+                    values.append(','.join(routes))
+                    driver['usual_routes'] = ','.join(routes)
+                if updates:
+                    conn.execute(
+                        f"UPDATE drivers SET {', '.join(updates)} WHERE id = ?",
+                        values + [driver_id],
+                    )
+
+            conn.execute('''
+                INSERT INTO checkins (
+                    date, driver_id, carrier_id, dms_task_id, dms_match_confirmed,
+                    route, departure_time, truck, dock, needs_return_cargo,
+                    route_ok, score_given
+                ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                record_date,
+                driver_id,
+                carrier_id,
+                task_id,
+                route,
+                str(record.get('departure_time') or ''),
+                str(record.get('truck') or ''),
+                str(record.get('dock') or ''),
+                int(bool(record.get('needs_return_cargo'))),
+                int(bool(record.get('route_ok', 1))),
+                float(record.get('score_given', 100.0)),
+            ))
+            affected_driver_ids.add(driver_id)
+            inserted += 1
+
+    for driver_id in affected_driver_ids:
+        recalculate_driver_score(driver_id)
+
+    return {'inserted': inserted, 'existing': existing, 'total': len(records)}
 
 
 # ========== 供应商 ==========

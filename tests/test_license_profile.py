@@ -120,6 +120,41 @@ class DriverLicenseProfileTest(unittest.TestCase):
         self.assertIn(b'name="record_date" value="2026-09-09"', response.data)
         self.assertIn(b'/?date=2026-09-09', response.data)
 
+    def test_bundled_history_imports_once_and_uses_operational_dates(self):
+        first = self.db.import_historical_seed()
+        second = self.db.import_historical_seed()
+
+        self.assertEqual(first['inserted'], 277)
+        self.assertEqual(second['inserted'], 0)
+        with self.db.get_db() as conn:
+            total = conn.execute('SELECT COUNT(*) FROM checkins').fetchone()[0]
+            after_midnight = conn.execute('''
+                SELECT date, score_given FROM checkins
+                WHERE dms_task_id = 'MT2026091000325'
+            ''').fetchone()
+        self.assertEqual(total, 277)
+        self.assertEqual(after_midnight['date'], '2026-09-09')
+        self.assertEqual(after_midnight['score_given'], 100.0)
+
+    def test_bundled_history_does_not_overwrite_existing_task_result(self):
+        self.db.import_historical_seed()
+        with self.db.get_db() as conn:
+            task = conn.execute('''
+                SELECT id FROM checkins WHERE dms_task_id = 'MT2026081500668'
+            ''').fetchone()
+            conn.execute('''
+                UPDATE checkins
+                SET score_given = 0, route_ok = 0, manual_deduction = 20,
+                    manual_deduction_category = '影响操作'
+                WHERE id = ?
+            ''', (task['id'],))
+
+        self.db.import_historical_seed()
+        checkin = self.db.get_checkin(task['id'])
+        self.assertEqual(checkin['score_given'], 0)
+        self.assertEqual(checkin['route_ok'], 0)
+        self.assertEqual(checkin['manual_deduction'], 20)
+
 
 if __name__ == '__main__':
     unittest.main()

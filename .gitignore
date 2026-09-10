@@ -25,6 +25,7 @@ build/
 dist/
 release/
 *.spec
+!BWIH调度系统.spec
 .tools/
 .github-auth/
 .DS_Store
