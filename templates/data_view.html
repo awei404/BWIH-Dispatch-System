@@ -3,26 +3,27 @@
 {% block main_width %}max-w-none{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-2xl font-bold mb-2">数据总览</h1>
-    <p class="text-gray-600">按 供应商 → 司机 → 任务，从左到右逐级查看</p>
+<div class="mb-7">
+    <p class="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-600">Operations Overview</p>
+    <h1 class="text-3xl font-bold text-slate-950">数据总览</h1>
+    <p class="mt-2 text-sm text-slate-500">按供应商 → 司机 → 任务，从左到右逐级查看。</p>
 </div>
 
 <!-- 汇总信息始终可见，历史明细按选择逐级展开。 -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-lg shadow p-4 text-center">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
         <div class="text-3xl font-bold text-blue-600">{{ stats.total_carriers }}</div>
         <div class="text-sm text-gray-600">供应商</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-4 text-center">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
         <div class="text-3xl font-bold text-blue-600">{{ stats.total_drivers }}</div>
         <div class="text-sm text-gray-600">司机</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-4 text-center">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
         <div class="text-3xl font-bold text-blue-600">{{ stats.total_checkins }}</div>
         <div class="text-sm text-gray-600">总任务数</div>
     </div>
-    <div class="bg-white rounded-lg shadow p-4 text-center">
+    <div class="rounded-2xl border border-emerald-100 bg-white p-5 text-center shadow-sm">
         <div class="text-3xl font-bold text-green-600">{{ stats.recent_checkins }}</div>
         <div class="text-sm text-gray-600">近7天任务</div>
     </div>

@@ -7,21 +7,31 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-blue-600 text-white">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="/" class="text-xl font-bold">BWIH</a>
-            <div class="flex space-x-4 text-sm">
-                <a href="/" class="hover:underline">今日</a>
-                <a href="/checkin" class="hover:underline">Check-in</a>
-                <a href="/upload" class="hover:underline">上传表格</a>
-                <a href="/data" class="hover:underline">数据总览</a>
-                <a href="/drivers" class="hover:underline">司机</a>
-                <a href="/carriers" class="hover:underline">供应商</a>
+<body class="app-shell min-h-screen">
+    <nav class="app-nav">
+        <div class="app-nav-inner">
+            <a href="/" class="app-brand" aria-label="BWIH 调度首页">
+                <span class="app-brand-mark">B</span>
+                <span>
+                    <strong>BWIH</strong>
+                    <small>Dispatch Center</small>
+                </span>
+            </a>
+            <div class="app-nav-links" aria-label="主要功能">
+                <a href="/" class="app-nav-link {% if request.path == '/' %}is-active{% endif %}"
+                   {% if request.path == '/' %}aria-current="page"{% endif %}>今日记录</a>
+                <a href="/checkin" class="app-nav-link {% if request.path == '/checkin' %}is-active{% endif %}"
+                   {% if request.path == '/checkin' %}aria-current="page"{% endif %}>司机 Check-in</a>
+                <a href="/upload" class="app-nav-link {% if request.path.startswith('/upload') %}is-active{% endif %}"
+                   {% if request.path.startswith('/upload') %}aria-current="page"{% endif %}>任务匹配</a>
+                <a href="/data" class="app-nav-link {% if request.path == '/data' %}is-active{% endif %}"
+                   {% if request.path == '/data' %}aria-current="page"{% endif %}>数据总览</a>
+                <a href="/drivers" class="app-nav-link {% if request.path.startswith('/driver') %}is-active{% endif %}"
+                   {% if request.path.startswith('/driver') %}aria-current="page"{% endif %}>司机档案</a>
             </div>
         </div>
     </nav>
-    <main class="{% block main_width %}max-w-6xl{% endblock %} mx-auto px-4 py-6">
+    <main class="app-main {% block main_width %}max-w-7xl{% endblock %} mx-auto px-4 py-7 md:px-6 md:py-9">
         {% block content %}{% endblock %}
     </main>
 </body>
