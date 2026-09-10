@@ -2,6 +2,8 @@ import io
 import os
 import tempfile
 import unittest
+from datetime import datetime
+from unittest.mock import patch
 
 
 class DriverLicenseProfileTest(unittest.TestCase):
@@ -79,6 +81,44 @@ class DriverLicenseProfileTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'enctype="multipart/form-data"', response.data)
         self.assertIn(b'name="license_photo"', response.data)
+
+    def test_no_return_cargo_choice_is_saved_as_no(self):
+        driver_id = self.db.create_driver('No Return Driver')
+        response = self.client.post('/checkin', data={
+            'driver_id': str(driver_id),
+            'needs_return_cargo': '0',
+            'scheduled_time': '18:00',
+            'arrival_time': '18:00',
+            'route': 'RIC',
+        })
+
+        checkin_id = int(response.headers['Location'].rstrip('/').split('/')[-1])
+        self.assertEqual(self.db.get_checkin(checkin_id)['needs_return_cargo'], 0)
+        self.assertIn('不需要回货'.encode('utf-8'), self.client.get(f'/print/{checkin_id}').data)
+
+    def test_operational_day_changes_at_3am(self):
+        self.assertEqual(
+            self.db.get_operational_date(datetime(2026, 9, 10, 2, 59)),
+            datetime(2026, 9, 9).date(),
+        )
+        self.assertEqual(
+            self.db.get_operational_date(datetime(2026, 9, 10, 3, 0)),
+            datetime(2026, 9, 10).date(),
+        )
+
+    def test_checkin_after_midnight_is_stored_on_previous_operational_day(self):
+        driver_id = self.db.create_driver('After Midnight Driver')
+        with patch.object(self.db, 'datetime') as mocked_datetime:
+            mocked_datetime.now.return_value = datetime(2026, 9, 10, 1, 30)
+            checkin_id = self.db.create_checkin(driver_id, arrival_time='01:30')
+
+        self.assertEqual(self.db.get_checkin(checkin_id)['date'], '2026-09-09')
+
+    def test_upload_page_allows_selecting_previous_date(self):
+        response = self.client.get('/upload?date=2026-09-09')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'name="record_date" value="2026-09-09"', response.data)
+        self.assertIn(b'/?date=2026-09-09', response.data)
 
 
 if __name__ == '__main__':

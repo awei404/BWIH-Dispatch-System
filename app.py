@@ -41,11 +41,12 @@ def handle_large_upload(error):
 
 @app.route('/')
 def index():
-    selected = request.args.get('date', date.today().isoformat())
+    operational_date = db.get_operational_date()
+    selected = request.args.get('date', operational_date.isoformat())
     try:
         selected_date = datetime.fromisoformat(selected).date()
     except ValueError:
-        selected_date = date.today()
+        selected_date = operational_date
     
     checkins = db.get_checkins_by_date(selected_date)
     drivers = db.get_drivers()
@@ -56,7 +57,7 @@ def index():
                            drivers=drivers,
                            carriers=carriers,
                            selected_date=selected_date,
-                           today=date.today())
+                           today=operational_date)
 
 
 # ========== Check-in ==========
@@ -110,7 +111,7 @@ def checkin():
             carrier_id=carrier_id,
             scheduled_time=request.form.get('scheduled_time', ''),
             arrival_time=request.form.get('arrival_time', ''),
-            needs_return_cargo=1 if request.form.get('needs_return_cargo') else 0,
+            needs_return_cargo=1 if request.form.get('needs_return_cargo') == '1' else 0,
             truck=request.form.get('truck', ''),
             dock=request.form.get('dock', ''),
             license_photo=license_photo,
@@ -134,7 +135,8 @@ def checkin():
     return render_template('checkin.html', 
                            drivers=drivers, 
                            carriers=carriers,
-                           time_options=time_options)
+                           time_options=time_options,
+                           operational_date=db.get_operational_date())
 
 
 # ========== 记录详情 ==========
@@ -283,24 +285,43 @@ def find_unique_checkin_match(row, checkins, carrier_col, route_col, arrival_col
         return None, '缺少至少两项一致信息（供应商、线路、到达时间）'
     return None, '存在多个相同候选记录，需人工确认'
 
+
+def selected_upload_date(raw_value=''):
+    if raw_value:
+        try:
+            return date.fromisoformat(raw_value)
+        except ValueError:
+            pass
+    return db.get_operational_date()
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_excel():
+    selected_date = selected_upload_date(
+        request.form.get('record_date', '') if request.method == 'POST'
+        else request.args.get('date', '')
+    )
+    template_context = {
+        'selected_date': selected_date,
+        'operational_date': db.get_operational_date(),
+    }
+
     if request.method == 'POST':
         results = {
             'tasks': [],
+            'record_date': selected_date.isoformat(),
             # 已经人工确认的记录无需再次出现在弹窗中；待确认和未填 MT 的记录需要处理。
             'pending_checkins': [
-                checkin for checkin in db.get_checkins_by_date(date.today())
+                checkin for checkin in db.get_checkins_by_date(selected_date)
                 if not checkin.get('dms_match_confirmed')
             ],
         }
         
         if 'file' not in request.files:
-            return render_template('upload.html', error='请选择文件')
+            return render_template('upload.html', error='请选择文件', **template_context)
         
         file = request.files['file']
         if not file.filename:
-            return render_template('upload.html', error='请选择文件')
+            return render_template('upload.html', error='请选择文件', **template_context)
         
         try:
             df = pd.read_excel(file)
@@ -338,10 +359,7 @@ def upload_excel():
                     trailer_col = col
             
             if not task_col:
-                return render_template('upload.html', error='找不到任务编码列')
-            
-            # 获取今日 Check-in 记录
-            today_checkins = db.get_checkins_by_date(date.today())
+                return render_template('upload.html', error='找不到任务编码列', **template_context)
             
             for _, row in df.iterrows():
                 task_id = str(row.get(task_col, '')).strip()
@@ -359,12 +377,12 @@ def upload_excel():
                     'trailer': clean_cell(row.get(trailer_col, '')) if trailer_col else '',
                 })
             
-            return render_template('upload.html', results=results)
+            return render_template('upload.html', results=results, **template_context)
             
         except Exception as e:
-            return render_template('upload.html', error=f'处理文件时出错: {str(e)}')
+            return render_template('upload.html', error=f'处理文件时出错: {str(e)}', **template_context)
     
-    return render_template('upload.html')
+    return render_template('upload.html', **template_context)
 
 
 @app.route('/upload/confirm', methods=['POST'])
@@ -422,7 +440,8 @@ def confirm_upload_matches_bulk():
         db.update_checkin(checkin_id, **updates)
         selected_task_ids.add(task_id)
 
-    return redirect(url_for('index'))
+    record_date = selected_upload_date(request.form.get('record_date', ''))
+    return redirect(url_for('index', date=record_date.isoformat()))
 
 
 # ========== 司机管理 ==========

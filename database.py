@@ -5,6 +5,17 @@ from contextlib import contextmanager
 import config
 
 
+OPERATIONAL_DAY_CUTOFF_HOUR = 3
+
+
+def get_operational_date(current_time=None):
+    """Return the dispatch date; 00:00-02:59 belongs to the previous day."""
+    current_time = current_time or datetime.now()
+    if current_time.hour < OPERATIONAL_DAY_CUTOFF_HOUR:
+        return (current_time - timedelta(days=1)).date()
+    return current_time.date()
+
+
 @contextmanager
 def get_db():
     conn = sqlite3.connect(config.DATABASE_PATH)
@@ -312,7 +323,7 @@ def get_checkin(checkin_id):
 
 def create_checkin(driver_id, carrier_id=None, scheduled_time='', arrival_time='', 
                    needs_return_cargo=0, truck='', dock='', license_photo='', notes='', route=''):
-    record_date = date.today()
+    record_date = get_operational_date()
     
     # 计算迟到分钟数
     late_minutes = calculate_late_minutes(scheduled_time, arrival_time)

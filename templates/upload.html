@@ -10,8 +10,12 @@
     <h1 class="text-2xl font-bold mb-6">上传 DMS 表格</h1>
     
     <p class="text-gray-600 mb-4">
-        上传 DMS 导出的表格后，按今日 Check-in 司机逐一人工确认对应的任务编号。
+        上传 DMS 导出的表格后，按所选调度日的 Check-in 司机逐一人工确认对应的任务编号。
     </p>
+
+    <div class="bg-amber-50 border border-amber-200 p-4 rounded mb-6 text-sm text-amber-900">
+        <strong>跨午夜规则：</strong>每天凌晨 3:00 才切换调度日。00:00–02:59 上传时，系统默认匹配前一天；如果凌晨 3:00 后才上传，也可以手动选择前一天。
+    </div>
     
     <div class="bg-blue-50 p-4 rounded mb-6">
         <p class="text-sm text-blue-800">
@@ -30,13 +34,19 @@
     
     {% if results %}
     <div class="bg-blue-50 text-blue-900 px-4 py-3 rounded mb-4">
-        <strong>待人工确认：{{ results.tasks|length }} 条任务</strong><br>
+        <strong>{{ results.record_date }} 调度日 · 待人工确认：{{ results.tasks|length }} 条任务</strong><br>
         DMS 表不含司机姓名，系统不会自动把 MT 编码写入任何 Check-in 记录。
     </div>
     <button type="button" id="open-confirm-modal" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">开始人工确认</button>
     {% endif %}
     
     <form method="post" enctype="multipart/form-data" class="space-y-4">
+        <div>
+            <label class="block text-sm text-gray-600 mb-2">要匹配的调度日期</label>
+            <input type="date" name="record_date" value="{{ selected_date }}"
+                   class="w-full md:w-64 border rounded px-3 py-2">
+            <p class="text-xs text-gray-500 mt-1">当前默认调度日：{{ operational_date }}</p>
+        </div>
         <div>
             <label class="block text-sm text-gray-600 mb-2">选择 Excel 文件</label>
             <input type="file" name="file" accept=".xlsx,.xls"
@@ -56,17 +66,18 @@
 </div>
 
 {% if results and results.tasks %}
-<!-- 上传后自动弹出：按今天的司机/目的地逐一确认 MT 编码。 -->
+<!-- 上传后自动弹出：按所选调度日的司机/目的地逐一确认 MT 编码。 -->
 <div id="confirm-modal" class="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
     <div class="bg-white w-full max-w-5xl max-h-[90vh] rounded shadow-xl overflow-hidden flex flex-col">
         <div class="px-6 py-4 border-b flex justify-between items-center">
             <div>
-                <h2 class="text-xl font-bold">确认今日司机对应的 MT 任务编码</h2>
+                <h2 class="text-xl font-bold">确认 {{ results.record_date }} 司机对应的 MT 任务编码</h2>
                 <p class="text-sm text-gray-500 mt-1">请按司机和目的地人工选择。未选择的司机不会被写入任何任务编码。</p>
             </div>
             <button type="button" id="close-confirm-modal" class="text-gray-500 text-2xl leading-none">&times;</button>
         </div>
         <form method="post" action="/upload/confirm-bulk" class="overflow-y-auto p-6 space-y-4">
+            <input type="hidden" name="record_date" value="{{ results.record_date }}">
             {% if results.pending_checkins %}
                 {% for checkin in results.pending_checkins %}
                 <div class="grid grid-cols-1 md:grid-cols-[1fr_1.4fr] gap-4 items-center border rounded p-4">
@@ -84,7 +95,7 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="text-gray-500">今天没有待人工确认的 Check-in 记录。</p>
+                <p class="text-gray-500">{{ results.record_date }} 没有待人工确认的 Check-in 记录。</p>
             {% endif %}
             <div class="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" id="cancel-confirm-modal" class="px-5 py-2 rounded border">稍后确认</button>
@@ -102,14 +113,14 @@
 </script>
 {% endif %}
 
-<!-- 今日待匹配记录 -->
+<!-- 所选调度日待匹配记录 -->
 <div class="bg-white rounded shadow p-6 mt-6">
-    <h2 class="font-semibold mb-4">今日待匹配记录</h2>
+    <h2 class="font-semibold mb-4">{{ selected_date }} 待匹配记录</h2>
     <p class="text-sm text-gray-500 mb-4">
         以下记录还没有经人工确认的 DMS 任务编号：
     </p>
     <div id="pending-list">
-        <a href="/" class="text-blue-600 hover:underline">查看今日记录</a>
+        <a href="/?date={{ selected_date }}" class="text-blue-600 hover:underline">查看 {{ selected_date }} 的 Check-in 记录</a>
     </div>
 </div>
 {% endblock %}
