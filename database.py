@@ -90,6 +90,7 @@ def init_db():
                 
                 -- 上传表格后自动填充
                 dms_task_id TEXT DEFAULT '',
+                source_record_key TEXT DEFAULT '',
                 dms_match_confirmed INTEGER DEFAULT 0,
                 route TEXT DEFAULT '',
                 departure_time TEXT DEFAULT '',
@@ -131,6 +132,8 @@ def init_db():
             conn.execute('ALTER TABLE checkins ADD COLUMN route_ok INTEGER DEFAULT 1')
         if 'dms_match_confirmed' not in columns:
             conn.execute('ALTER TABLE checkins ADD COLUMN dms_match_confirmed INTEGER DEFAULT 0')
+        if 'source_record_key' not in columns:
+            conn.execute("ALTER TABLE checkins ADD COLUMN source_record_key TEXT DEFAULT ''")
         if 'manual_deduction' not in columns:
             conn.execute('ALTER TABLE checkins ADD COLUMN manual_deduction REAL DEFAULT 0')
         if 'manual_deduction_category' not in columns:
@@ -148,6 +151,11 @@ def init_db():
         if 'manual_score_updated_at' not in driver_columns:
             conn.execute('ALTER TABLE drivers ADD COLUMN manual_score_updated_at DATETIME')
         conn.execute('UPDATE drivers SET auto_score = score WHERE auto_score IS NULL')
+        conn.execute('''
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_checkins_source_record_key
+            ON checkins(source_record_key)
+            WHERE source_record_key <> ''
+        ''')
     import_historical_seed()
     print(f"数据库已初始化: {config.DATABASE_PATH}")
 
@@ -187,16 +195,17 @@ def import_historical_seed(seed_path=None):
             for row in conn.execute('SELECT id, name FROM carriers')
         }
         drivers = [dict(row) for row in conn.execute(
-            'SELECT id, name, carrier_id, usual_routes FROM drivers'
+            'SELECT id, name, phone, carrier_id, usual_routes FROM drivers'
         )]
         driver_ids = {normalize_driver_name(row['name']): row['id'] for row in drivers}
         driver_rows = {row['id']: row for row in drivers}
 
         for record in records:
             task_id = str(record.get('task_id') or '').strip()
+            record_key = str(record.get('record_key') or '').strip()
             driver_name = str(record.get('driver') or '').strip()
             record_date = str(record.get('date') or '').strip()
-            if not task_id or not driver_name or not record_date:
+            if not (task_id or record_key) or not driver_name or not record_date:
                 continue
 
             carrier_name = str(record.get('carrier') or '').strip()
@@ -206,11 +215,21 @@ def import_historical_seed(seed_path=None):
                 carrier_id = cursor.lastrowid
                 carrier_ids[carrier_name.casefold()] = carrier_id
 
-            existing_task = conn.execute(
-                'SELECT id, driver_id FROM checkins WHERE dms_task_id = ? LIMIT 1',
-                (task_id,),
-            ).fetchone()
+            existing_task = None
+            if task_id:
+                existing_task = conn.execute(
+                    'SELECT id, driver_id FROM checkins WHERE dms_task_id = ? LIMIT 1',
+                    (task_id,),
+                ).fetchone()
+            if existing_task is None and record_key:
+                existing_task = conn.execute(
+                    'SELECT id, driver_id FROM checkins WHERE source_record_key = ? LIMIT 1',
+                    (record_key,),
+                ).fetchone()
             if existing_task:
+                scheduled_time = str(record.get('scheduled_time') or '')
+                arrival_time = str(record.get('arrival_time') or '')
+                late_minutes = calculate_late_minutes(scheduled_time, arrival_time)
                 conn.execute('''
                     UPDATE checkins
                     SET date = ?,
@@ -218,8 +237,13 @@ def import_historical_seed(seed_path=None):
                         departure_time = CASE WHEN COALESCE(departure_time, '') = '' THEN ? ELSE departure_time END,
                         truck = CASE WHEN COALESCE(truck, '') = '' THEN ? ELSE truck END,
                         dock = CASE WHEN COALESCE(dock, '') = '' THEN ? ELSE dock END,
+                        scheduled_time = CASE WHEN COALESCE(scheduled_time, '') = '' THEN ? ELSE scheduled_time END,
+                        arrival_time = CASE WHEN COALESCE(arrival_time, '') = '' THEN ? ELSE arrival_time END,
+                        late_minutes = COALESCE(late_minutes, ?),
+                        notes = CASE WHEN COALESCE(notes, '') = '' THEN ? ELSE notes END,
+                        source_record_key = CASE WHEN COALESCE(source_record_key, '') = '' THEN ? ELSE source_record_key END,
                         needs_return_cargo = CASE WHEN ? = 1 THEN 1 ELSE needs_return_cargo END,
-                        dms_match_confirmed = 1,
+                        dms_match_confirmed = CASE WHEN ? = 1 THEN 1 ELSE dms_match_confirmed END,
                         score_given = COALESCE(score_given, ?)
                     WHERE id = ?
                 ''', (
@@ -228,10 +252,23 @@ def import_historical_seed(seed_path=None):
                     str(record.get('departure_time') or ''),
                     str(record.get('truck') or ''),
                     str(record.get('dock') or ''),
+                    scheduled_time,
+                    arrival_time,
+                    late_minutes,
+                    str(record.get('notes') or ''),
+                    record_key,
                     int(bool(record.get('needs_return_cargo'))),
+                    int(bool(task_id)),
                     float(record.get('score_given', 100.0)),
                     existing_task['id'],
                 ))
+                phone = str(record.get('phone') or '').strip()
+                if phone:
+                    conn.execute('''
+                        UPDATE drivers
+                        SET phone = CASE WHEN COALESCE(phone, '') = '' THEN ? ELSE phone END
+                        WHERE id = ?
+                    ''', (phone, existing_task['driver_id']))
                 affected_driver_ids.add(existing_task['driver_id'])
                 existing += 1
                 continue
@@ -245,14 +282,16 @@ def import_historical_seed(seed_path=None):
             route = str(record.get('route') or '').strip()
 
             if driver_id is None:
+                phone = str(record.get('phone') or '').strip()
                 cursor = conn.execute('''
-                    INSERT INTO drivers (name, carrier_id, usual_routes)
-                    VALUES (?, ?, ?)
-                ''', (driver_name, carrier_id, route))
+                    INSERT INTO drivers (name, phone, carrier_id, usual_routes)
+                    VALUES (?, ?, ?, ?)
+                ''', (driver_name, phone, carrier_id, route))
                 driver_id = cursor.lastrowid
                 row = {
                     'id': driver_id,
                     'name': driver_name,
+                    'phone': phone,
                     'carrier_id': carrier_id,
                     'usual_routes': route,
                 }
@@ -272,6 +311,11 @@ def import_historical_seed(seed_path=None):
                     updates.append('carrier_id = ?')
                     values.append(carrier_id)
                     driver['carrier_id'] = carrier_id
+                phone = str(record.get('phone') or '').strip()
+                if phone and not str(driver.get('phone') or '').strip():
+                    updates.append('phone = ?')
+                    values.append(phone)
+                    driver['phone'] = phone
                 routes = [value.strip() for value in (driver.get('usual_routes') or '').split(',') if value.strip()]
                 if route and route not in routes:
                     routes.append(route)
@@ -286,21 +330,31 @@ def import_historical_seed(seed_path=None):
 
             conn.execute('''
                 INSERT INTO checkins (
-                    date, driver_id, carrier_id, dms_task_id, dms_match_confirmed,
-                    route, departure_time, truck, dock, needs_return_cargo,
-                    route_ok, score_given
-                ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+                    date, driver_id, carrier_id, dms_task_id, source_record_key,
+                    dms_match_confirmed, route, scheduled_time, arrival_time,
+                    departure_time, truck, dock, notes, needs_return_cargo,
+                    route_ok, late_minutes, score_given
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 record_date,
                 driver_id,
                 carrier_id,
                 task_id,
+                record_key,
+                int(bool(task_id)),
                 route,
+                str(record.get('scheduled_time') or ''),
+                str(record.get('arrival_time') or ''),
                 str(record.get('departure_time') or ''),
                 str(record.get('truck') or ''),
                 str(record.get('dock') or ''),
+                str(record.get('notes') or ''),
                 int(bool(record.get('needs_return_cargo'))),
                 int(bool(record.get('route_ok', 1))),
+                calculate_late_minutes(
+                    str(record.get('scheduled_time') or ''),
+                    str(record.get('arrival_time') or ''),
+                ),
                 float(record.get('score_given', 100.0)),
             ))
             affected_driver_ids.add(driver_id)

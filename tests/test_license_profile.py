@@ -124,7 +124,7 @@ class DriverLicenseProfileTest(unittest.TestCase):
         first = self.db.import_historical_seed()
         second = self.db.import_historical_seed()
 
-        self.assertEqual(first['inserted'], 277)
+        self.assertEqual(first['inserted'], 282)
         self.assertEqual(second['inserted'], 0)
         with self.db.get_db() as conn:
             total = conn.execute('SELECT COUNT(*) FROM checkins').fetchone()[0]
@@ -132,9 +132,26 @@ class DriverLicenseProfileTest(unittest.TestCase):
                 SELECT date, score_given FROM checkins
                 WHERE dms_task_id = 'MT2026091000325'
             ''').fetchone()
-        self.assertEqual(total, 277)
+            chat_record = conn.execute('''
+                SELECT ch.date, ch.scheduled_time, ch.arrival_time, ch.late_minutes,
+                       ch.dms_task_id, ch.dms_match_confirmed, ch.score_given,
+                       d.name, d.phone
+                FROM checkins ch
+                JOIN drivers d ON d.id = ch.driver_id
+                WHERE ch.source_record_key = 'CHAT-20260910-IAD-1830-TEMEEKA-WILLIAMS'
+            ''').fetchone()
+        self.assertEqual(total, 282)
         self.assertEqual(after_midnight['date'], '2026-09-09')
         self.assertEqual(after_midnight['score_given'], 100.0)
+        self.assertEqual(chat_record['date'], '2026-09-10')
+        self.assertEqual(chat_record['scheduled_time'], '18:30')
+        self.assertEqual(chat_record['arrival_time'], '18:30')
+        self.assertEqual(chat_record['late_minutes'], 0)
+        self.assertEqual(chat_record['dms_task_id'], '')
+        self.assertEqual(chat_record['dms_match_confirmed'], 0)
+        self.assertEqual(chat_record['score_given'], 100.0)
+        self.assertEqual(chat_record['name'], 'Temeeka Williams')
+        self.assertEqual(chat_record['phone'], '240-481-8722')
 
     def test_bundled_history_does_not_overwrite_existing_task_result(self):
         self.db.import_historical_seed()
