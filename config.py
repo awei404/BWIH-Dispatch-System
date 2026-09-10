@@ -20,6 +20,7 @@ else:
 os.makedirs(DATA_DIR, exist_ok=True)
 DATABASE_PATH = os.path.join(DATA_DIR, 'dispatch.db')
 HISTORICAL_SEED_PATH = os.path.join(RESOURCE_DIR, 'data', 'historical_seed.json')
+CHAT_UPDATES_PATH = os.path.join(RESOURCE_DIR, 'data', 'chat_updates.json')
 
 SECRET_KEY = 'bwih-local-key'
 DEBUG = False

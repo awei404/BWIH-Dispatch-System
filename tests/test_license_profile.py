@@ -33,6 +33,7 @@ class DriverLicenseProfileTest(unittest.TestCase):
 
     def setUp(self):
         with self.db.get_db() as conn:
+            conn.execute('DELETE FROM shared_data_events')
             conn.execute('DELETE FROM checkins')
             conn.execute('DELETE FROM drivers')
 
@@ -126,6 +127,8 @@ class DriverLicenseProfileTest(unittest.TestCase):
 
         self.assertEqual(first['inserted'], 282)
         self.assertEqual(second['inserted'], 0)
+        self.assertEqual(first['updates_applied'], 121)
+        self.assertEqual(second['updates_applied'], 0)
         with self.db.get_db() as conn:
             total = conn.execute('SELECT COUNT(*) FROM checkins').fetchone()[0]
             after_midnight = conn.execute('''
@@ -140,7 +143,7 @@ class DriverLicenseProfileTest(unittest.TestCase):
                 JOIN drivers d ON d.id = ch.driver_id
                 WHERE ch.source_record_key = 'CHAT-20260910-IAD-1830-TEMEEKA-WILLIAMS'
             ''').fetchone()
-        self.assertEqual(total, 282)
+        self.assertEqual(total, 284)
         self.assertEqual(after_midnight['date'], '2026-09-09')
         self.assertEqual(after_midnight['score_given'], 100.0)
         self.assertEqual(chat_record['date'], '2026-09-10')
@@ -152,6 +155,44 @@ class DriverLicenseProfileTest(unittest.TestCase):
         self.assertEqual(chat_record['score_given'], 100.0)
         self.assertEqual(chat_record['name'], 'Temeeka Williams')
         self.assertEqual(chat_record['phone'], '240-481-8722')
+
+    def test_chat_evidence_updates_scores_once_and_preserves_later_edits(self):
+        self.db.import_historical_seed()
+        with self.db.get_db() as conn:
+            luke = conn.execute('''
+                SELECT id, scheduled_time, arrival_time, late_minutes, score_given
+                FROM checkins WHERE dms_task_id = 'MT2026082500699'
+            ''').fetchone()
+            kevin = conn.execute('''
+                SELECT score_given, manual_deduction, manual_deduction_category
+                FROM checkins WHERE dms_task_id = 'MT2026090100732'
+            ''').fetchone()
+            joseph = conn.execute('''
+                SELECT ch.score_given, ch.manual_deduction, d.status
+                FROM checkins ch JOIN drivers d ON d.id = ch.driver_id
+                WHERE ch.source_record_key = 'MAPCHAT-20260826-JOSEPH-BEHAVIOR'
+            ''').fetchone()
+
+        self.assertEqual(luke['scheduled_time'], '18:30')
+        self.assertEqual(luke['arrival_time'], '19:00')
+        self.assertEqual(luke['late_minutes'], 30)
+        self.assertEqual(luke['score_given'], 55.0)
+        self.assertEqual(kevin['score_given'], 0.0)
+        self.assertEqual(kevin['manual_deduction'], 100.0)
+        self.assertEqual(kevin['manual_deduction_category'], '影响操作')
+        self.assertEqual(joseph['score_given'], 0.0)
+        self.assertEqual(joseph['status'], '限制')
+
+        with self.db.get_db() as conn:
+            conn.execute('''
+                UPDATE checkins SET arrival_time = '18:30', late_minutes = 0, score_given = 100
+                WHERE id = ?
+            ''', (luke['id'],))
+        result = self.db.import_historical_seed()
+        edited = self.db.get_checkin(luke['id'])
+        self.assertEqual(result['updates_applied'], 0)
+        self.assertEqual(edited['arrival_time'], '18:30')
+        self.assertEqual(edited['score_given'], 100.0)
 
     def test_bundled_history_does_not_overwrite_existing_task_result(self):
         self.db.import_historical_seed()

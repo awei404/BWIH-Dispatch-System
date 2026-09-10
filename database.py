@@ -118,6 +118,15 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_checkins_driver ON checkins(driver_id);
             CREATE INDEX IF NOT EXISTS idx_driver_score_adjustments_driver
                 ON driver_score_adjustments(driver_id, created_at DESC);
+
+            -- 共享数据更新的幂等记录。每条聊天证据只应用一次，避免应用每次
+            -- 启动时覆盖调度员之后做出的人工修正。
+            CREATE TABLE IF NOT EXISTS shared_data_events (
+                event_key TEXT PRIMARY KEY,
+                checkin_id INTEGER,
+                applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (checkin_id) REFERENCES checkins(id)
+            );
             
             -- 只保留 HHX 和 MAP
             INSERT OR IGNORE INTO carriers (name) VALUES ('HHX');
@@ -185,8 +194,18 @@ def import_historical_seed(seed_path=None):
 
     records = seed.get('records') or []
     aliases = seed.get('driver_aliases') or {}
+    updates_path = getattr(config, 'CHAT_UPDATES_PATH', '')
+    chat_updates = []
+    if updates_path and os.path.exists(updates_path):
+        try:
+            with open(updates_path, 'r', encoding='utf-8') as updates_file:
+                chat_updates = (json.load(updates_file).get('updates') or [])
+        except (OSError, ValueError, TypeError) as error:
+            print(f"聊天更新数据包无法读取: {error}")
     inserted = 0
     existing = 0
+    updates_applied = 0
+    updates_existing = 0
     affected_driver_ids = set()
 
     with get_db() as conn:
@@ -360,10 +379,182 @@ def import_historical_seed(seed_path=None):
             affected_driver_ids.add(driver_id)
             inserted += 1
 
+        for update in chat_updates:
+            event_key = str(update.get('event_key') or '').strip()
+            task_id = str(update.get('task_id') or '').strip()
+            record_key = str(update.get('record_key') or '').strip()
+            driver_name = str(update.get('driver') or '').strip()
+            record_date = str(update.get('date') or '').strip()
+            if not event_key or not driver_name or not record_date:
+                continue
+
+            already_applied = conn.execute(
+                'SELECT checkin_id FROM shared_data_events WHERE event_key = ? LIMIT 1',
+                (event_key,),
+            ).fetchone()
+            if already_applied:
+                updates_existing += 1
+                continue
+
+            checkin = None
+            if task_id:
+                checkin = conn.execute(
+                    'SELECT * FROM checkins WHERE dms_task_id = ? LIMIT 1',
+                    (task_id,),
+                ).fetchone()
+            if checkin is None and record_key:
+                checkin = conn.execute(
+                    'SELECT * FROM checkins WHERE source_record_key = ? LIMIT 1',
+                    (record_key,),
+                ).fetchone()
+
+            carrier_name = str(update.get('carrier') or '').strip()
+            carrier_id = carrier_ids.get(carrier_name.casefold()) if carrier_name else None
+            if carrier_name and carrier_id is None:
+                cursor = conn.execute('INSERT INTO carriers (name) VALUES (?)', (carrier_name,))
+                carrier_id = cursor.lastrowid
+                carrier_ids[carrier_name.casefold()] = carrier_id
+
+            if checkin is not None:
+                checkin = dict(checkin)
+                checkin_id = checkin['id']
+                driver_id = checkin['driver_id']
+                scheduled_time = str(update.get('scheduled_time') or '')
+                arrival_time = str(update.get('arrival_time') or '')
+                effective_scheduled = str(checkin.get('scheduled_time') or scheduled_time)
+                effective_arrival = str(checkin.get('arrival_time') or arrival_time)
+                late_minutes = calculate_late_minutes(effective_scheduled, effective_arrival)
+
+                notes = str(update.get('notes') or '').strip()
+                vehicle_parts = []
+                if str(update.get('truck_number') or '').strip():
+                    vehicle_parts.append(f"车号 {str(update.get('truck_number')).strip()}")
+                if str(update.get('trailer') or '').strip():
+                    vehicle_parts.append(f"拖车 {str(update.get('trailer')).strip()}")
+                if vehicle_parts:
+                    notes = f"{notes} 车辆信息：{'；'.join(vehicle_parts)}。".strip()
+                old_notes = str(checkin.get('notes') or '').strip()
+                merged_notes = old_notes
+                if notes and notes not in old_notes:
+                    merged_notes = f"{old_notes}\n{notes}".strip()
+
+                had_manual_timing = bool(
+                    str(checkin.get('scheduled_time') or '').strip()
+                    or str(checkin.get('arrival_time') or '').strip()
+                )
+                can_apply_authoritative_score = (
+                    not had_manual_timing
+                    and float(checkin.get('manual_deduction') or 0) == 0
+                    and int(checkin.get('route_ok', 1) or 0) == 1
+                    and str(checkin.get('return_cargo_status') or '').strip() in ('', '待确认')
+                )
+
+                fields = {
+                    'date': record_date,
+                    'route': str(checkin.get('route') or update.get('route') or ''),
+                    'scheduled_time': effective_scheduled,
+                    'arrival_time': effective_arrival,
+                    'late_minutes': late_minutes,
+                    'notes': merged_notes,
+                    'dms_match_confirmed': 1 if task_id else int(bool(checkin.get('dms_match_confirmed'))),
+                    'updated_at': datetime.now().isoformat(),
+                }
+                if checkin.get('score_given') is None:
+                    fields['score_given'] = float(update.get('score_given', 100.0))
+                if update.get('authoritative_score') and can_apply_authoritative_score:
+                    fields.update({
+                        'score_given': float(update.get('score_given', 100.0)),
+                        'manual_deduction': float(update.get('manual_deduction') or 0),
+                        'manual_deduction_category': str(update.get('manual_deduction_category') or ''),
+                        'manual_deduction_reason': str(update.get('manual_deduction_reason') or ''),
+                    })
+                assignments = ', '.join(f'{name} = ?' for name in fields)
+                conn.execute(
+                    f'UPDATE checkins SET {assignments} WHERE id = ?',
+                    list(fields.values()) + [checkin_id],
+                )
+            else:
+                lookup_names = [driver_name] + list(aliases.get(driver_name) or [])
+                driver_id = next(
+                    (driver_ids.get(normalize_driver_name(name)) for name in lookup_names
+                     if driver_ids.get(normalize_driver_name(name)) is not None),
+                    None,
+                )
+                route = str(update.get('route') or '').strip()
+                phone = str(update.get('phone') or '').strip()
+                if driver_id is None:
+                    cursor = conn.execute('''
+                        INSERT INTO drivers (name, phone, carrier_id, usual_routes)
+                        VALUES (?, ?, ?, ?)
+                    ''', (driver_name, phone, carrier_id, route))
+                    driver_id = cursor.lastrowid
+                    driver_ids[normalize_driver_name(driver_name)] = driver_id
+                    driver_rows[driver_id] = {
+                        'id': driver_id,
+                        'name': driver_name,
+                        'phone': phone,
+                        'carrier_id': carrier_id,
+                        'usual_routes': route,
+                    }
+
+                scheduled_time = str(update.get('scheduled_time') or '')
+                arrival_time = str(update.get('arrival_time') or '')
+                cursor = conn.execute('''
+                    INSERT INTO checkins (
+                        date, driver_id, carrier_id, dms_task_id, source_record_key,
+                        dms_match_confirmed, route, scheduled_time, arrival_time,
+                        notes, route_ok, late_minutes, manual_deduction,
+                        manual_deduction_category, manual_deduction_reason, score_given
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    record_date,
+                    driver_id,
+                    carrier_id,
+                    task_id,
+                    record_key or event_key,
+                    int(bool(task_id)),
+                    route,
+                    scheduled_time,
+                    arrival_time,
+                    str(update.get('notes') or ''),
+                    int(bool(update.get('route_ok', 1))),
+                    calculate_late_minutes(scheduled_time, arrival_time),
+                    float(update.get('manual_deduction') or 0),
+                    str(update.get('manual_deduction_category') or ''),
+                    str(update.get('manual_deduction_reason') or ''),
+                    float(update.get('score_given', 100.0)),
+                ))
+                checkin_id = cursor.lastrowid
+
+            phone = str(update.get('phone') or '').strip()
+            if phone:
+                conn.execute('''
+                    UPDATE drivers
+                    SET phone = CASE WHEN COALESCE(phone, '') = '' THEN ? ELSE phone END
+                    WHERE id = ?
+                ''', (phone, driver_id))
+            driver_status = str(update.get('driver_status') or '').strip()
+            if driver_status:
+                conn.execute('UPDATE drivers SET status = ? WHERE id = ?', (driver_status, driver_id))
+
+            conn.execute(
+                'INSERT INTO shared_data_events (event_key, checkin_id) VALUES (?, ?)',
+                (event_key, checkin_id),
+            )
+            affected_driver_ids.add(driver_id)
+            updates_applied += 1
+
     for driver_id in affected_driver_ids:
         recalculate_driver_score(driver_id)
 
-    return {'inserted': inserted, 'existing': existing, 'total': len(records)}
+    return {
+        'inserted': inserted,
+        'existing': existing,
+        'total': len(records),
+        'updates_applied': updates_applied,
+        'updates_existing': updates_existing,
+        'updates_total': len(chat_updates),
+    }
 
 
 # ========== 供应商 ==========

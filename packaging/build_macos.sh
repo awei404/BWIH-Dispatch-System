@@ -13,6 +13,11 @@ APP_DIR="$ROOT_DIR/release/BWIH调度系统.app"
 rm -rf "$APP_DIR"
 mkdir -p "$ROOT_DIR/release"
 ditto "$ROOT_DIR/dist/BWIH调度系统.app" "$APP_DIR"
+cp "$ROOT_DIR/packaging/macos-Info.plist" "$APP_DIR/Contents/Info.plist"
+
+# Re-sign after applying the final bundle metadata; otherwise macOS treats the
+# changed Info.plist as a damaged application.
+codesign --force --deep --sign - "$APP_DIR"
 
 # Remove macOS quarantine flag so the app can be shared without Gatekeeper blocking.
 xattr -cr "$APP_DIR" 2>/dev/null || true

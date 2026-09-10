@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='BWIH调度系统',
+    name='BWIH Dispatch',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -41,11 +41,12 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='BWIH调度系统',
+    name='BWIH Dispatch',
 )
 app = BUNDLE(
     coll,
     name='BWIH调度系统.app',
     icon='packaging/assets/bwih-dispatch.icns',
-    bundle_identifier=None,
+    version='1.7.4',
+    bundle_identifier='local.bwih.dispatch',
 )
