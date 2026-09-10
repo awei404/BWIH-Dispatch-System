@@ -1,0 +1,12 @@
+BWIH 调度系统 - Mac 使用说明
+================================
+
+1. 双击打开下载的 DMG 文件。
+2. 在打开的窗口中双击“BWIH Dispatch”应用图标即可使用。
+3. 如需长期保留，可把应用拖到右侧的 Applications 文件夹。
+
+系统会自动打开浏览器页面，数据保存在本机：
+~/Library/Application Support/BWIH Dispatch/
+
+如果 macOS 第一次提示来源未验证：
+按住 Control 点击应用图标，选择“打开”，再确认一次。

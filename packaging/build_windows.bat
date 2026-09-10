@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0.."
 
-python -m PyInstaller --noconfirm --clean --onedir --console ^
+python -m PyInstaller --noconfirm --clean --onedir --noconsole ^
   --name "BWIH Dispatch" ^
   --icon "packaging\assets\bwih-dispatch.ico" ^
   --add-data "templates;templates" ^
